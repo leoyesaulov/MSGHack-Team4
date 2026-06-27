@@ -8,7 +8,7 @@ db_name = os.getenv("POSTGRES_DB", "cityvoice")
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    f"postgresql://{db_user}:{db_pass}@172.18.0.2:5432/{db_name}",
+    f"postgresql://{db_user}:{db_pass}@db/{db_name}",
 )
 
 engine = create_engine(DATABASE_URL)
