@@ -29,6 +29,7 @@ export interface Proposal {
   formal_text: string | null
   image_path: string | null
   image_url: string | null
+  gemeinde: string | null
   author_id: number
   author_username: string
   author_display_name: string

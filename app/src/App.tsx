@@ -9,6 +9,7 @@ import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import AboutPage from './pages/AboutPage'
 import BehoerdePage from './pages/BehoerdePage'
+import ProfilePage from './pages/ProfilePage'
 
 function Nav() {
   const { user, clearAuth } = useAuthStore()
@@ -31,9 +32,12 @@ function Nav() {
         <NavLink to="/about">Über CityVoice</NavLink>
         {user ? (
           <>
-            <span style={{ fontSize: '.85rem', color: 'var(--muted)', fontWeight: 500 }}>
+            <NavLink
+              to="/profil"
+              style={{ fontSize: '.85rem', color: 'var(--muted)', fontWeight: 500, textDecoration: 'none' }}
+            >
               👤 {user.display_name}
-            </span>
+            </NavLink>
             <button className="btn btn-ghost btn-sm" onClick={logout}>Abmelden</button>
           </>
         ) : (
@@ -63,6 +67,7 @@ export default function App() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/behoerde" element={<BehoerdePage />} />
+        <Route path="/profil" element={<ProfilePage />} />
       </Routes>
     </BrowserRouter>
   )

@@ -29,6 +29,7 @@ class UserBase(SQLModel):
     display_name: str
     email: str = Field(unique=True, index=True)
     district: Optional[str] = None
+    gemeinde: Optional[str] = Field(default=None, index=True)
 
 
 class User(UserBase, table=True):
@@ -47,11 +48,13 @@ class UserCreate(SQLModel):
     email: str
     password: str
     district: Optional[str] = None
+    gemeinde: Optional[str] = None
 
 
 class UserRead(UserBase):
     id: int
     is_behoerde: bool
+    gemeinde: Optional[str]
     created_at: datetime
 
 
@@ -70,6 +73,7 @@ class ProposalBase(SQLModel):
     threshold: int = 50
     formal_text: Optional[str] = None
     image_path: Optional[str] = None
+    gemeinde: Optional[str] = Field(default=None, index=True)
 
 
 class Proposal(ProposalBase, table=True):

@@ -1,21 +1,71 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { api } from '../lib/api'
 import { useAuthStore } from '../lib/authStore'
 import ToastContainer, { toast } from '../components/Toast'
+import gemeindenRaw from '../data/gemeinden.json'
+
+const GEMEINDEN: string[] = gemeindenRaw as string[]
 
 export default function RegisterPage() {
-  const [form, setForm] = useState({ username: '', display_name: '', email: '', password: '', password2: '', district: '' })
+  const [form, setForm] = useState({
+    username: '', display_name: '', email: '', password: '', password2: '',
+    gemeinde: '',
+  })
+  const [gemeindeInput, setGemeindeInput] = useState('')
+  const [showDropdown, setShowDropdown] = useState(false)
+  const [highlighted, setHighlighted] = useState(0)
   const [loading, setLoading] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const listRef = useRef<HTMLUListElement>(null)
   const setAuth = useAuthStore((s) => s.setAuth)
   const navigate = useNavigate()
 
-  function set(field: string, value: string) {
+  const filtered = gemeindeInput.length >= 1
+    ? GEMEINDEN.filter((g) => g.toLowerCase().includes(gemeindeInput.toLowerCase())).slice(0, 80)
+    : []
+
+  useEffect(() => { setHighlighted(0) }, [gemeindeInput])
+
+  function setField(field: string, value: string) {
     setForm((f) => ({ ...f, [field]: value }))
   }
 
+  function selectGemeinde(g: string) {
+    setForm((f) => ({ ...f, gemeinde: g }))
+    setGemeindeInput(g)
+    setShowDropdown(false)
+    inputRef.current?.blur()
+  }
+
+  function handleGemeindeKey(e: React.KeyboardEvent) {
+    if (!showDropdown || filtered.length === 0) return
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setHighlighted((h) => Math.min(h + 1, filtered.length - 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setHighlighted((h) => Math.max(h - 1, 0))
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      selectGemeinde(filtered[highlighted])
+    } else if (e.key === 'Escape') {
+      setShowDropdown(false)
+    }
+  }
+
+  // scroll highlighted item into view
+  useEffect(() => {
+    const el = listRef.current?.children[highlighted] as HTMLElement | undefined
+    el?.scrollIntoView({ block: 'nearest' })
+  }, [highlighted])
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (!form.gemeinde) {
+      toast('Bitte wähle eine Gemeinde aus.', 'error')
+      return
+    }
     if (form.password !== form.password2) {
       toast('Passwörter stimmen nicht überein.', 'error')
       return
@@ -27,12 +77,11 @@ export default function RegisterPage() {
         display_name: form.display_name,
         email: form.email,
         password: form.password,
-        district: form.district || undefined,
+        gemeinde: form.gemeinde,
       })
-      // auto-login after register
       const data = await api.auth.login(form.username, form.password)
       setAuth(data.access_token, data.user)
-      toast('Willkommen bei CityVoice! 🎉')
+      toast('Willkommen bei CityVoice!')
       navigate('/')
     } catch (err: unknown) {
       toast(err instanceof Error ? err.message : 'Registrierung fehlgeschlagen', 'error')
@@ -61,7 +110,7 @@ export default function RegisterPage() {
                     required
                     autoFocus
                     value={form.username}
-                    onChange={(e) => set('username', e.target.value)}
+                    onChange={(e) => setField('username', e.target.value)}
                     placeholder="max_m"
                     pattern="[a-zA-Z0-9_]+"
                     title="Nur Buchstaben, Zahlen und Unterstriche"
@@ -74,7 +123,7 @@ export default function RegisterPage() {
                   <input
                     required
                     value={form.display_name}
-                    onChange={(e) => set('display_name', e.target.value)}
+                    onChange={(e) => setField('display_name', e.target.value)}
                     placeholder="Max Mustermann"
                     autoComplete="name"
                   />
@@ -87,20 +136,60 @@ export default function RegisterPage() {
                   required
                   type="email"
                   value={form.email}
-                  onChange={(e) => set('email', e.target.value)}
+                  onChange={(e) => setField('email', e.target.value)}
                   placeholder="max@beispiel.de"
                   autoComplete="email"
                 />
               </div>
 
-              <div className="form-group">
-                <label>Stadtviertel</label>
+              {/* Searchable Gemeinde dropdown */}
+              <div className="form-group" style={{ position: 'relative' }}>
+                <label>Gemeinde *</label>
                 <input
-                  value={form.district}
-                  onChange={(e) => set('district', e.target.value)}
-                  placeholder="z. B. Schwabing"
+                  ref={inputRef}
+                  required
+                  value={gemeindeInput}
+                  onChange={(e) => {
+                    setGemeindeInput(e.target.value)
+                    setForm((f) => ({ ...f, gemeinde: '' }))
+                    setShowDropdown(true)
+                  }}
+                  onFocus={() => { if (gemeindeInput) setShowDropdown(true) }}
+                  onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+                  onKeyDown={handleGemeindeKey}
+                  placeholder="Gemeinde suchen…"
+                  autoComplete="off"
                 />
-                <span className="form-hint">Hilft dabei, lokale Vorschläge in deiner Nähe zu finden.</span>
+                <span className="form-hint">Tippe mindestens 1 Buchstaben zum Suchen.</span>
+                {showDropdown && filtered.length > 0 && (
+                  <ul
+                    ref={listRef}
+                    style={{
+                      position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 999,
+                      background: 'var(--card, #fff)', border: '1px solid var(--border, #ddd)',
+                      borderTop: 'none', borderRadius: '0 0 8px 8px',
+                      maxHeight: 220, overflowY: 'auto', margin: 0, padding: 0,
+                      listStyle: 'none', boxShadow: '0 4px 16px rgba(0,0,0,.12)',
+                    }}
+                  >
+                    {filtered.map((g, i) => (
+                      <li
+                        key={g}
+                        onMouseDown={() => selectGemeinde(g)}
+                        style={{
+                          padding: '.5rem .85rem',
+                          cursor: 'pointer',
+                          background: i === highlighted ? 'var(--brand)' : 'transparent',
+                          color: i === highlighted ? '#fff' : 'inherit',
+                          fontSize: '.92rem',
+                        }}
+                        onMouseEnter={() => setHighlighted(i)}
+                      >
+                        {g}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 1rem' }}>
@@ -110,7 +199,7 @@ export default function RegisterPage() {
                     required
                     type="password"
                     value={form.password}
-                    onChange={(e) => set('password', e.target.value)}
+                    onChange={(e) => setField('password', e.target.value)}
                     placeholder="••••••••"
                     minLength={6}
                     autoComplete="new-password"
@@ -122,7 +211,7 @@ export default function RegisterPage() {
                     required
                     type="password"
                     value={form.password2}
-                    onChange={(e) => set('password2', e.target.value)}
+                    onChange={(e) => setField('password2', e.target.value)}
                     placeholder="••••••••"
                     autoComplete="new-password"
                   />

@@ -46,12 +46,15 @@ def list_proposals(
     status: Optional[ProposalStatus] = None,
     category: Optional[str] = None,
     session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_optional),
 ):
     q = select(Proposal)
     if status:
         q = q.where(Proposal.status == status)
     if category:
         q = q.where(Proposal.category == category)
+    if current_user and current_user.gemeinde:
+        q = q.where(Proposal.gemeinde == current_user.gemeinde)
     proposals = session.exec(q.order_by(Proposal.created_at.desc())).all()
     for p in proposals:
         _ = p.author
@@ -65,7 +68,10 @@ def create_proposal(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
-    proposal = Proposal.model_validate(payload, update={"author_id": current_user.id})
+    proposal = Proposal.model_validate(payload, update={
+        "author_id": current_user.id,
+        "gemeinde": current_user.gemeinde,
+    })
     session.add(proposal)
     session.commit()
     session.refresh(proposal)
@@ -77,15 +83,18 @@ def create_proposal(
 def behoerde_inbox(
     request: Request,
     session: Session = Depends(get_session),
-    _: User = Depends(get_current_behoerde),
+    behoerde: User = Depends(get_current_behoerde),
 ):
-    """All proposals that have reached or passed the threshold — visible only to Behörde accounts."""
+    """All actionable proposals for the Behörde's own Gemeinde."""
     actionable_statuses = [
         ProposalStatus.submitted,
         ProposalStatus.accepted,
         ProposalStatus.rejected,
     ]
-    q = select(Proposal).where(Proposal.status.in_(actionable_statuses)).order_by(Proposal.updated_at.desc())
+    q = select(Proposal).where(Proposal.status.in_(actionable_statuses))
+    if behoerde.gemeinde:
+        q = q.where(Proposal.gemeinde == behoerde.gemeinde)
+    q = q.order_by(Proposal.updated_at.desc())
     proposals = session.exec(q).all()
     for p in proposals:
         _ = p.author

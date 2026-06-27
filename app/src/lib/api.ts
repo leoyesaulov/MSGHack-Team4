@@ -45,10 +45,17 @@ async function loginRequest(username: string, password: string) {
 
 export const api = {
   auth: {
-    register: (payload: { username: string; display_name: string; email: string; password: string; district?: string }) =>
+    register: (payload: { username: string; display_name: string; email: string; password: string; district?: string; gemeinde?: string }) =>
       request('/auth/register', { method: 'POST', body: JSON.stringify(payload) }),
     login: loginRequest,
     me: () => request('/auth/me'),
+    updateMe: (payload: {
+      display_name?: string
+      username?: string
+      gemeinde?: string
+      current_password?: string
+      new_password?: string
+    }) => request('/auth/me', { method: 'PATCH', body: JSON.stringify(payload) }),
   },
 
   proposals: {
