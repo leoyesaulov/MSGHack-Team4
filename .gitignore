@@ -16,3 +16,4 @@ app/dist/
 
 # environment
 .env
+api/.DS_Store
