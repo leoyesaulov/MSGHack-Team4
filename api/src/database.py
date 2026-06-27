@@ -1,14 +1,13 @@
 import os
 from sqlmodel import SQLModel, Session, create_engine
 
-# 1. Fetch individual variables (with your default fallbacks)
 db_user = os.getenv("POSTGRES_USER", "dbuser")
 db_pass = os.getenv("POSTGRES_PASSWORD", "dbpass")
 db_name = os.getenv("POSTGRES_DB", "cityvoice")
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    f"postgresql://{db_user}:{db_pass}@db/{db_name}",
+    f"postgresql://{db_user}:{db_pass}@172.18.0.3:5432/{db_name}",
 )
 
 engine = create_engine(DATABASE_URL)

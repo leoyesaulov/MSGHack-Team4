@@ -25,7 +25,7 @@ export default function SubmitPage() {
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [gemeindeFlyTo, setGemeindeFlyTo] = useState<[number, number] | null>(null)
+  const [initialCenter, setInitialCenter] = useState<[number, number] | null>(null)
 
   useEffect(() => {
     if (!user) { navigate('/login'); return }
@@ -33,13 +33,15 @@ export default function SubmitPage() {
       fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(user.gemeinde + ', Germany')}&format=json&limit=1`)
         .then((r) => r.json())
         .then((results) => {
-          if (results[0]) {
-            const coords: [number, number] = [parseFloat(results[0].lat), parseFloat(results[0].lon)]
-            setGemeindeFlyTo(coords)
-            setForm((f) => ({ ...f, latitude: coords[0], longitude: coords[1] }))
-          }
+          const coords: [number, number] = results[0]
+            ? [parseFloat(results[0].lat), parseFloat(results[0].lon)]
+            : [48.2242, 11.6715]
+          setInitialCenter(coords)
+          setForm((f) => ({ ...f, latitude: coords[0], longitude: coords[1] }))
         })
-        .catch(() => {})
+        .catch(() => setInitialCenter([48.2242, 11.6715]))
+    } else {
+      setInitialCenter([48.2242, 11.6715])
     }
   }, [user, navigate])
 
@@ -113,29 +115,8 @@ export default function SubmitPage() {
           <div style={{ marginBottom: '2rem' }}>
             <h1 style={{ fontSize: '1.8rem', fontWeight: 800, marginBottom: '.5rem' }}>Idee einreichen</h1>
             <p style={{ color: 'var(--muted)' }}>
-              Beschreibe deine Idee in deinen eigenen Worten — kein Behördendeutsch nötig.
-              Die KI-Verfeinerung kommt später dazu.
+              Schreib einfach, was dir auf dem Herzen liegt. Kein Behördendeutsch, keine Formulare.
             </p>
-          </div>
-
-          {/* HOW IT WORKS */}
-          <div className="card" style={{ marginBottom: '2rem', background: 'var(--brand-light)', border: '1px solid #bfdbfe' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '.75rem' }}>
-              {[
-                { n: '1', t: 'Idee beschreiben', d: 'Schreib einfach auf Deutsch, was du dir wünschst.' },
-                { n: '2', t: 'Veröffentlichen', d: 'Dein Vorschlag erscheint auf der Karte und im Feed.' },
-                { n: '3', t: 'Nachbarschaft stimmt ab', d: 'Andere Bürger können unterstützen & kommentieren.' },
-                { n: '4', t: 'Antrag wird versandt', d: 'Bei über 50 Unterstützern wird automatisch ein formaler Antrag generiert.' },
-              ].map((s) => (
-                <div key={s.n} className="wizard-step">
-                  <div className="wizard-step-num">{s.n}</div>
-                  <div className="wizard-step-info">
-                    <h3>{s.t}</h3>
-                    <p>{s.d}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
           </div>
 
           <form onSubmit={handleSubmit} className="card">
@@ -158,7 +139,7 @@ export default function SubmitPage() {
                 lat={form.latitude}
                 lng={form.longitude}
                 onChange={setLocation}
-                flyTo={gemeindeFlyTo}
+                initialCenter={initialCenter}
               />
             </div>
 

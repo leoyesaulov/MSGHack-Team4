@@ -1,5 +1,4 @@
-import { useEffect } from 'react'
-import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
 
 const PIN_ICON = L.divIcon({
@@ -12,19 +11,11 @@ const PIN_ICON = L.divIcon({
   iconAnchor: [16, 48],
 })
 
-function FlyTo({ lat, lng }: { lat: number; lng: number }) {
-  const map = useMap()
-  useEffect(() => {
-    map.flyTo([lat, lng], map.getZoom(), { duration: 1.2 })
-  }, [lat, lng, map])
-  return null
-}
-
 interface Props {
   lat: number
   lng: number
   onChange: (lat: number, lng: number) => void
-  flyTo?: [number, number] | null
+  initialCenter?: [number, number] | null
 }
 
 function ClickHandler({ onChange }: { onChange: (lat: number, lng: number) => void }) {
@@ -36,11 +27,18 @@ function ClickHandler({ onChange }: { onChange: (lat: number, lng: number) => vo
   return null
 }
 
-export default function LocationPicker({ lat, lng, onChange, flyTo }: Props) {
+export default function LocationPicker({ lat, lng, onChange, initialCenter }: Props) {
+  // Don't render until we have a center to open at
+  if (!initialCenter) return (
+    <div style={{ height: 300, borderRadius: 10, border: '1.5px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: '.9rem', background: 'var(--bg)' }}>
+      Standort wird ermittelt…
+    </div>
+  )
+
   return (
     <div style={{ borderRadius: 10, overflow: 'hidden', border: '1.5px solid var(--border)', cursor: 'crosshair' }}>
       <MapContainer
-        center={[lat, lng]}
+        center={initialCenter}
         zoom={15}
         style={{ height: 300, width: '100%' }}
       >
@@ -48,7 +46,6 @@ export default function LocationPicker({ lat, lng, onChange, flyTo }: Props) {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        {flyTo && <FlyTo lat={flyTo[0]} lng={flyTo[1]} />}
         <ClickHandler onChange={onChange} />
         <Marker position={[lat, lng]} icon={PIN_ICON} />
       </MapContainer>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
 import { useNavigate } from 'react-router-dom'
 import L from 'leaflet'
 import { api } from '../lib/api'
@@ -31,18 +31,12 @@ function makeIcon(color: string) {
   })
 }
 
-function FlyToUser({ coords }: { coords: [number, number] | null }) {
-  const map = useMap()
-  useEffect(() => {
-    if (coords) map.flyTo(coords, 14, { duration: 1.5 })
-  }, [coords, map])
-  return null
-}
+const DEFAULT_CENTER: [number, number] = [48.2242, 11.6715]
 
 export default function MapPage() {
   const [proposals, setProposals] = useState<Proposal[]>([])
   const [selected, setSelected] = useState<number | null>(null)
-  const [userCoords, setUserCoords] = useState<[number, number] | null>(null)
+  const [center, setCenter] = useState<[number, number] | null>(null)
   const navigate = useNavigate()
   const user = useAuthStore((s) => s.user)
 
@@ -52,21 +46,20 @@ export default function MapPage() {
 
   useEffect(() => {
     if (user?.gemeinde) {
-      // Geocode the user's Gemeinde via Nominatim
       fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(user.gemeinde + ', Germany')}&format=json&limit=1`)
         .then((r) => r.json())
         .then((results) => {
-          if (results[0]) {
-            setUserCoords([parseFloat(results[0].lat), parseFloat(results[0].lon)])
-          }
+          setCenter(results[0] ? [parseFloat(results[0].lat), parseFloat(results[0].lon)] : DEFAULT_CENTER)
         })
-        .catch(() => { /* stay on default */ })
+        .catch(() => setCenter(DEFAULT_CENTER))
     } else if (!user && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (pos) => setUserCoords([pos.coords.latitude, pos.coords.longitude]),
-        () => { /* permission denied or unavailable — stay on default center */ },
+        (pos) => setCenter([pos.coords.latitude, pos.coords.longitude]),
+        () => setCenter(DEFAULT_CENTER),
         { timeout: 6000 }
       )
+    } else {
+      setCenter(DEFAULT_CENTER)
     }
   }, [user])
 
@@ -100,8 +93,8 @@ export default function MapPage() {
 
       {/* Map */}
       <div className="map-main">
-        <MapContainer
-          center={[48.2242, 11.6715]}
+        {center && <MapContainer
+          center={center}
           zoom={14}
           style={{ height: '100%', width: '100%' }}
         >
@@ -109,7 +102,6 @@ export default function MapPage() {
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          <FlyToUser coords={userCoords} />
           {proposals.map((p) => (
             <Marker
               key={p.id}
@@ -139,7 +131,7 @@ export default function MapPage() {
               </Popup>
             </Marker>
           ))}
-        </MapContainer>
+        </MapContainer>}
       </div>
 
       {/* Detail panel (bottom bar on mobile, hidden on desktop — already accessible via sidebar click & nav) */}

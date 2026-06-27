@@ -9,7 +9,7 @@ export default function AboutPage() {
         </h1>
         <p style={{ fontSize: '1.1rem', color: 'var(--muted)', lineHeight: 1.7 }}>
           CityVoice ist eine digitale Bürgerpartizipationsplattform, die es jedem Bürger ermöglicht,
-          Ideen und Anliegen für die Gemeinde unkompliziert einzureichen, zu unterstützen und zu verfolgen —
+          Ideen und Anliegen für die Gemeinde unkompliziert einzureichen, zu unterstützen und zu verfolgen,
           direkt aus dem Browser, ohne Behördendeutsch.
         </p>
       </div>
@@ -98,12 +98,15 @@ export default function AboutPage() {
         </div>
       </div>
 
-      {/* Two-column: for citizens + for government */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-        <div className="card">
-          <div style={{ fontSize: '1.6rem', marginBottom: '.75rem' }}>👤</div>
-          <h2 style={{ fontWeight: 800, fontSize: '1.1rem', marginBottom: '.75rem' }}>Für Bürgerinnen & Bürger</h2>
-          <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '.6rem' }}>
+      {/* Split panel: for citizens + for government */}
+      <div className="card" style={{ padding: 0, overflow: 'hidden', marginBottom: '2rem', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+        {/* Left: citizens */}
+        <div style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border)' }}>
+            <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--brand-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>👤</div>
+            <h2 style={{ fontWeight: 800, fontSize: '1.05rem', margin: 0 }}>Für Bürgerinnen & Bürger</h2>
+          </div>
+          <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '.75rem' }}>
             {[
               'Kein Formular-Chaos — einfach in eigenen Worten schreiben',
               'Ort direkt auf der Karte markieren',
@@ -111,18 +114,21 @@ export default function AboutPage() {
               'Andere Ideen unterstützen und kommentieren',
               'Status-Tracking vom ersten Klick bis zur Behördenentscheidung',
             ].map((t, i) => (
-              <li key={i} style={{ display: 'flex', gap: '.6rem', fontSize: '.88rem', color: 'var(--muted)' }}>
-                <span style={{ color: 'var(--brand)', fontWeight: 700, flexShrink: 0 }}>✓</span>
+              <li key={i} style={{ display: 'flex', gap: '.65rem', fontSize: '.88rem', color: 'var(--muted)', alignItems: 'flex-start' }}>
+                <span style={{ color: 'var(--brand)', fontWeight: 700, flexShrink: 0, marginTop: '.05rem' }}>✓</span>
                 {t}
               </li>
             ))}
           </ul>
         </div>
 
-        <div className="card">
-          <div style={{ fontSize: '1.6rem', marginBottom: '.75rem' }}>🏛</div>
-          <h2 style={{ fontWeight: 800, fontSize: '1.1rem', marginBottom: '.75rem' }}>Für die Gemeinde</h2>
-          <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '.6rem' }}>
+        {/* Divider */}
+        <div style={{ borderLeft: '1px solid var(--border)', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border)' }}>
+            <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--brand-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>🏛</div>
+            <h2 style={{ fontWeight: 800, fontSize: '1.05rem', margin: 0 }}>Für die Gemeinde</h2>
+          </div>
+          <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '.75rem' }}>
             {[
               'Nur Anliegen mit echter Rückendeckung (> 50 Stimmen) werden weitergeleitet',
               'Formaler Antrag wird automatisch generiert — kein manueller Aufwand',
@@ -130,8 +136,8 @@ export default function AboutPage() {
               'Öffentliche Transparenz stärkt das Vertrauen der Bürger',
               'Digitaler Eingang für die gesamte Partizipation an einem Ort',
             ].map((t, i) => (
-              <li key={i} style={{ display: 'flex', gap: '.6rem', fontSize: '.88rem', color: 'var(--muted)' }}>
-                <span style={{ color: 'var(--brand)', fontWeight: 700, flexShrink: 0 }}>✓</span>
+              <li key={i} style={{ display: 'flex', gap: '.65rem', fontSize: '.88rem', color: 'var(--muted)', alignItems: 'flex-start' }}>
+                <span style={{ color: 'var(--brand)', fontWeight: 700, flexShrink: 0, marginTop: '.05rem' }}>✓</span>
                 {t}
               </li>
             ))}
