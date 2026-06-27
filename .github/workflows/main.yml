@@ -15,7 +15,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Execute Build Commands
-        run: 
+        run: |
           docker build -t team4.api .
           docker run -d -p 8000:8000 team4.api
           # echo "This is running directly on the EC2 hardware"
