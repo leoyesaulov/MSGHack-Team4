@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -e
 
+# Load environment variables from .env
+if [ -f .env ]; then
+  export $(cat .env | grep -v '^#' | xargs)
+fi
+
 # Kill anything still on the ports from a previous run
 fuser -k 8000/tcp 2>/dev/null || true
 fuser -k 5173/tcp 2>/dev/null || true

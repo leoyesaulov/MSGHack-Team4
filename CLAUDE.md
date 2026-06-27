@@ -8,6 +8,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 The workflow: Citizens submit ideas → AI provides feedback on feasibility and legal aspects → AI generates a visual poster → Community votes → When threshold (50 votes) is reached, the proposal automatically transitions to "submitted" status → Municipal authority reviews and accepts/rejects.
 
+## Environment Configuration
+
+**Single `.env` file** in project root serves as the single source of truth for all environment variables. Copy `.env.example` to `.env` and fill in your values:
+
+```bash
+cp .env.example .env
+```
+
+Required variables:
+- `DATABASE_URL` - SQLite path for local development
+- `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_NAME` - PostgreSQL for Docker
+- `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION` - AWS Bedrock for RAG/AI features
+
 ## Architecture
 
 **Monorepo structure:**

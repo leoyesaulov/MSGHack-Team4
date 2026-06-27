@@ -1,122 +1,120 @@
-# CityVoice
+# CityVoice - Bürgerbeteiligungsplattform
 
-A digital citizen participation platform that lets residents submit proposals, vote on community ideas, and have accepted requests forwarded to the responsible municipal authority.
+Civic engagement platform for the city of Ismaning, enabling citizens to submit proposals, gather votes, and submit formal applications to municipal authorities.
 
----
-
-## Features
-
-- **Proposal submission** — Citizens write ideas in plain language; the platform guides them through the process
-- **Community voting** — Proposals need more than 50 votes to advance to the municipal inbox
-- **Gemeinde filter** — Users register with their Gemeinde; they only see proposals from their own community
-- **Behörden portal** — Authority accounts see only submitted proposals for their Gemeinde, can accept/reject, and download a formal PDF
-- **User profile** — Change username, display name, Gemeinde, and password at any time; delete own proposals
-- **Interactive map** — All proposals shown on a Leaflet map with status markers; auto-flies to the user's Gemeinde when logged in, or to browser geolocation when not
-- **Proposal map** — Location picker in the submission form also centers on the user's Gemeinde automatically
-- **Photo + Street View** — Uploaded proposal photos and Google Street View can be toggled on the detail page
-- **Pipeline visualization** — 4-step progress display; accepted turns all steps green, rejected shows first 3 green and last red with ✕
-
-## Status flow
-
-```
-open  →  (50+ votes)  →  submitted  →  accepted
-                                    ↘  rejected
-```
-
----
-
-## Tech stack
-
-| Layer    | Technology |
-|----------|-----------|
-| Frontend | React 18 + TypeScript + Vite |
-| Routing  | React Router v6 |
-| State    | Zustand + localStorage |
-| Map      | react-leaflet v4 |
-| Backend  | FastAPI + SQLModel |
-| Database | PostgreSQL (psycopg2) |
-| Auth     | JWT (python-jose) + bcrypt |
-
----
-
-## Local development
+## Quick Start
 
 ### Prerequisites
-
 - Python 3.12+
 - Node.js 20+
-- A running PostgreSQL instance (see below)
+- Docker & Docker Compose (optional)
 
-### Quickstart
+### Setup
 
+1. **Clone and configure environment:**
+```bash
+git clone <repository-url>
+cd MSGHack-Team4
+cp .env.example .env
+# Edit .env with your AWS credentials and database settings
+```
+
+2. **Run with Docker (recommended):**
+```bash
+docker compose up --build
+```
+
+3. **Or run locally:**
 ```bash
 ./dev.sh
 ```
 
-This starts both the API (port 8000) and the Vite dev server (port 5173).
+### Access
 
-### Database
+- **Frontend:** http://localhost:5173
+- **API:** http://localhost:8000
+- **API Docs:** http://localhost:8000/docs
 
-The API connects to PostgreSQL via the `DATABASE_URL` environment variable:
+### Demo Accounts
 
-```
-DATABASE_URL=postgresql://dbuser:dbpass@localhost:5432/cityvoice
-```
+- **Citizen:** `stefan_m` / `demo1234`
+- **Authority:** `gemeinde_ismaning` / `behoerde2024`
 
-If the variable is not set, it falls back to the Docker container default. Tables and seed data are created automatically on first startup.
+## Environment Variables
 
-**Demo accounts (seeded automatically):**
-
-| Role      | Username            | Password      |
-|-----------|---------------------|---------------|
-| Citizen   | `stefan_m`          | `demo1234`    |
-| Authority | `gemeinde_ismaning` | `behoerde2024`|
-
----
-
-## Docker
-
-Build and run the API only:
+All configuration is managed through a single `.env` file in the project root:
 
 ```bash
-docker build -t cityvoice-api .
-docker run -d -p 8000:8000 \
-  -e DATABASE_URL=postgresql://dbuser:dbpass@host:5432/cityvoice \
-  cityvoice-api
+# Database
+DATABASE_URL=sqlite:///./cityvoice.db
+
+# PostgreSQL (Docker)
+POSTGRES_USER=cityvoice
+POSTGRES_PASSWORD=cityvoice2024
+POSTGRES_NAME=cityvoice_db
+
+# AWS Bedrock (RAG/AI features)
+AWS_ACCESS_KEY_ID=your_key_here
+AWS_SECRET_ACCESS_KEY=your_secret_here
+AWS_REGION=eu-north-1
 ```
 
-Run the full stack (API + frontend + PostgreSQL):
+## Tech Stack
 
-```bash
-docker-compose up
-```
+**Backend:**
+- FastAPI 0.111.0
+- SQLModel 0.0.18 + PostgreSQL with pgvector
+- AWS Bedrock (Claude 4.5 Sonnet + Titan Embeddings)
+- JWT authentication
 
-Set `DB_USER`, `DB_PASSWORD`, and `DB_NAME` in a `.env` file before running docker-compose.
+**Frontend:**
+- React 18.3 + TypeScript
+- Vite 5.4
+- Zustand (state management)
+- Leaflet (maps)
 
----
-
-## Project structure
+## Architecture
 
 ```
 MSGHack-Team4/
-├── api/                  # FastAPI backend
+├── api/              # FastAPI backend
 │   ├── src/
-│   │   ├── main.py       # App entrypoint, lifespan, CORS
-│   │   ├── models.py     # SQLModel table definitions
-│   │   ├── database.py   # Engine + session
-│   │   ├── auth.py       # JWT helpers, dependencies
-│   │   ├── seed.py       # Demo data seeder
-│   │   └── routers/
-│   │       ├── auth.py       # /auth/* (register, login, me, PATCH me)
-│   │       └── proposals.py  # /proposals/* (CRUD, votes, comments, Behörde inbox)
+│   │   ├── routers/  # API endpoints
+│   │   ├── models.py # Database models
+│   │   ├── database.py
+│   │   ├── rag.py    # RAG/AI logic
+│   │   └── main.py
 │   └── requirements.txt
-├── app/                  # React frontend
-│   └── src/
-│       ├── pages/        # One file per route
-│       ├── components/   # Shared UI components
-│       ├── lib/          # api.ts, authStore.ts, types.ts
-│       └── data/         # gemeinden.json (9 587 German Gemeinden)
-├── Dockerfile
+├── app/              # React frontend
+│   ├── src/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   └── lib/
+│   └── package.json
+├── .env              # Environment config (single source of truth)
 ├── docker-compose.yml
-└── dev.sh                # Start both servers locally
+└── dev.sh           # Local development script
 ```
+
+## Key Features
+
+- **Proposal Submission:** Citizens create proposals with location picker
+- **RAG-powered Improvement:** AI improves proposal text using similar accepted examples
+- **Voting System:** Community votes with configurable thresholds
+- **Status Pipeline:** open → submitted → accepted/rejected
+- **Authority Inbox:** Dedicated interface for municipal review
+- **Map View:** Leaflet-based visualization of proposals
+
+## Database
+
+- **Development:** SQLite (`api/cityvoice.db`)
+- **Docker:** PostgreSQL 15 with pgvector extension
+- Auto-seeded with demo data on first run
+
+## Development
+
+See [CLAUDE.md](./CLAUDE.md) for detailed architecture and development guidelines.
+
+## License
+
+Proprietary - MSG Hackathon 2026
