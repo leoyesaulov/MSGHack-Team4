@@ -22,3 +22,4 @@ api/.env
 # OS
 .DS_Store
 api/.DS_Store
+/env
