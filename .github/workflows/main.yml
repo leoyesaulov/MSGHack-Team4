@@ -21,6 +21,7 @@ jobs:
         run: |
           # echo "This is running directly on the EC2 hardware"
           # E.g., docker build, make install, or ollama model pulling
+          echo $POSTGRES_USER
           docker compose up -d --build
 
         env:
