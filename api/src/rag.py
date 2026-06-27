@@ -3,6 +3,7 @@ import boto3
 import json
 import os
 from typing import List, Optional
+from .web_research import deep_research, research_similar_projects
 
 # AWS Bedrock client - credentials from environment variables
 bedrock = boto3.client(
@@ -186,3 +187,111 @@ Erstelle jetzt den vollständigen Bürgerantrag als JSON."""
         print(f"generate_antrag error: {e}")
         import traceback; traceback.print_exc()
         raise
+
+
+FEASIBILITY_SYSTEM_PROMPT = """Du bist ein Experte für kommunale Stadtplanung und Bürgerbeteiligung.
+
+Deine Aufgabe ist es, einen neuen Vorschlag eines Bürgers zu bewerten und zu prüfen, ob er realistisch und sinnvoll ist.
+
+Du hast Zugriff auf:
+1. Alle bestehenden Vorschläge in der Datenbank
+2. Aktuelle Web-Recherche-Ergebnisse zu ähnlichen Projekten in Deutschland
+3. Informationen zu Kosten, Vorschriften und Best Practices
+
+Prüfe folgende Aspekte:
+1. **Redundanz**: Gibt es bereits einen ähnlichen Vorschlag an diesem Ort? (z.B. Zebrastreifen nur 10m entfernt)
+2. **Widerspruch**: Widerspricht der Vorschlag bestehenden akzeptierten Projekten?
+3. **Machbarkeit**: Ist der Vorschlag generell umsetzbar? Nutze Web-Recherche-Ergebnisse für realistische Einschätzung
+4. **Konflikte**: Könnte der Vorschlag mit bestehenden Vorschlägen kollidieren?
+5. **Realistische Umsetzung**: Basierend auf ähnlichen Projekten - ist das machbar?
+
+Gib eine KURZE aber INFORMIERTE Einschätzung zurück (max. 3-4 Sätze).
+
+Format:
+- Wenn OK: "✓ Ihr Vorschlag ist realistisch und sinnvoll. [Optional: Kurzer Hinweis aus Web-Recherche]"
+- Wenn Bedenken: "⚠️ [Kurze Warnung mit konkretem Detail aus Recherche]. Möchten Sie trotzdem fortfahren?"
+- Wenn kritisch: "✗ [Kurzes Problem mit Begründung]. Bitte überprüfen Sie Ihren Vorschlag."
+
+Sei konstruktiv und hilfsbereit, nicht überkritisch. Nutze die Web-Recherche für konkrete Hinweise."""
+
+
+async def check_proposal_feasibility(
+    title: str,
+    description: str,
+    location_name: str,
+    latitude: float,
+    longitude: float,
+    category: str,
+    existing_proposals: List[dict],
+    gemeinde: str = "",
+) -> str:
+    """
+    Check if a new proposal is feasible/realistic based on:
+    1. Existing proposals in the database
+    2. Web research on similar projects
+    """
+
+    # Step 1: Perform web research on the topic
+    print(f"🔍 Starting web research for: {title}")
+    try:
+        research_results = await deep_research(
+            topic=f"{category} {title}",
+            location=gemeinde or "Deutschland"
+        )
+
+        web_research_text = "=== WEB-RECHERCHE ERGEBNISSE ===\n\n"
+        if research_results["results"]:
+            for i, result in enumerate(research_results["results"], 1):
+                web_research_text += f"{i}. **{result['title']}**\n"
+                web_research_text += f"   {result['snippet'][:200]}...\n\n"
+        else:
+            web_research_text += "Keine relevanten Web-Ergebnisse gefunden.\n\n"
+
+        print(f"✅ Web research completed: {research_results['results_count']} results")
+    except Exception as e:
+        print(f"⚠️ Web research failed: {e}")
+        web_research_text = "=== WEB-RECHERCHE ERGEBNISSE ===\nWeb-Recherche konnte nicht durchgeführt werden.\n\n"
+
+    # Step 2: Format existing proposals for context
+    existing_text = "\n\n".join([
+        f"- **{p['title']}** ({p['status']})\n"
+        f"  Kategorie: {p['category']}\n"
+        f"  Ort: {p['location_name']} (Lat: {p.get('latitude', 'N/A')}, Lng: {p.get('longitude', 'N/A')})\n"
+        f"  Beschreibung: {p.get('description_raw', '')[:200]}..."
+        for p in existing_proposals[:20]  # Limit to 20 most relevant
+    ]) if existing_proposals else "Keine bestehenden Vorschläge in der Nähe."
+
+    # Step 3: Build comprehensive prompt with web research
+    user_message = f"""{FEASIBILITY_SYSTEM_PROMPT}
+
+=== NEUER VORSCHLAG ===
+Titel: {title}
+Kategorie: {category}
+Gemeinde: {gemeinde}
+Ort: {location_name}
+Koordinaten: Lat {latitude}, Lng {longitude}
+Beschreibung: {description}
+
+=== BESTEHENDE VORSCHLÄGE IN DER DATENBANK ===
+{existing_text}
+
+{web_research_text}
+
+Basierend auf den bestehenden Vorschlägen UND der Web-Recherche, gib jetzt deine informierte Einschätzung (max. 3-4 Sätze):"""
+
+    try:
+        model_id = "eu.anthropic.claude-sonnet-4-5-20250929-v1:0"
+        print(f"🤖 Calling Claude for feasibility assessment...")
+        response = bedrock.converse(
+            modelId=model_id,
+            messages=[{"role": "user", "content": [{"text": user_message}]}],
+            inferenceConfig={"maxTokens": 300, "temperature": 0.3},
+        )
+        result = response["output"]["message"]["content"][0]["text"].strip()
+        print(f"✅ Claude assessment completed")
+        return result
+    except Exception as e:
+        print(f"❌ Error checking feasibility: {e}")
+        import traceback; traceback.print_exc()
+        # Fallback message
+        return "✓ Ihr Vorschlag wird geprüft."

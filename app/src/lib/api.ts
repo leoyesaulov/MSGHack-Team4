@@ -94,6 +94,19 @@ export const api = {
         body: JSON.stringify({ text })
       })
     },
+    checkFeasibility: async (payload: {
+      title: string
+      description: string
+      location_name: string
+      latitude: number
+      longitude: number
+      category: string
+    }): Promise<{ assessment: string; is_feasible: boolean }> => {
+      return request('/proposals/check-feasibility', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      })
+    },
   },
 
   votes: {

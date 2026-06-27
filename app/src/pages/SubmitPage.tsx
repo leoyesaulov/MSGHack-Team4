@@ -27,6 +27,15 @@ export default function SubmitPage() {
   const [generating, setGenerating] = useState(false)
   const [result, setResult] = useState<GenerateResult | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [checkingFeasibility, setCheckingFeasibility] = useState(false)
+  const [feasibilityResult, setFeasibilityResult] = useState<{assessment: string, is_feasible: boolean} | null>(null)
+  const [showFeasibilityPopup, setShowFeasibilityPopup] = useState(false)
+
+  // Editable fields for the generated result
+  const [editedTitle, setEditedTitle] = useState('')
+  const [editedSummary, setEditedSummary] = useState('')
+  const [editedFormalText, setEditedFormalText] = useState('')
+  const [isEditing, setIsEditing] = useState(false)
 
   useEffect(() => {
     if (!user) { navigate('/login'); return }
@@ -78,7 +87,13 @@ export default function SubmitPage() {
         const err = await res.json().catch(() => ({ detail: res.statusText }))
         throw new Error(err.detail ?? 'Fehler bei der KI-Generierung.')
       }
-      setResult(await res.json())
+      const generatedResult = await res.json()
+      setResult(generatedResult)
+      // Initialize editable fields
+      setEditedTitle(generatedResult.title)
+      setEditedSummary(generatedResult.summary)
+      setEditedFormalText(generatedResult.formal_text)
+      setIsEditing(false)
     } catch (err: unknown) {
       toast(err instanceof Error ? err.message : 'Fehler bei der KI-Generierung.', 'error')
     } finally {
@@ -100,7 +115,45 @@ export default function SubmitPage() {
 
   async function handleSubmit() {
     if (!result) return
+
+    // Step 1: Check feasibility with edited/generated text
+    setCheckingFeasibility(true)
+    try {
+      let locationName = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`
+      try {
+        const geo = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=de`
+        ).then((r) => r.json())
+        const a = geo.address ?? {}
+        locationName = [a.road, a.house_number, a.suburb ?? a.village ?? a.town ?? a.city]
+          .filter(Boolean).join(' ') || geo.display_name?.split(',')[0] || locationName
+      } catch { /* keep fallback */ }
+
+      // Call feasibility check API with EDITED/GENERATED text, not raw input
+      const feasibilityRes = await api.proposals.checkFeasibility({
+        title: editedTitle,
+        description: editedSummary + '\n\n' + editedFormalText,  // Use edited AI-generated text
+        location_name: locationName,
+        latitude,
+        longitude,
+        category: 'Sonstiges',
+      })
+
+      setFeasibilityResult(feasibilityRes)
+      setShowFeasibilityPopup(true)
+      setCheckingFeasibility(false)
+    } catch (err: unknown) {
+      setCheckingFeasibility(false)
+      toast('Machbarkeitsprüfung fehlgeschlagen. Trotzdem fortfahren?', 'error')
+      // Continue with submission
+      await proceedWithSubmission()
+    }
+  }
+
+  async function proceedWithSubmission() {
+    if (!result) return
     setSubmitting(true)
+    setShowFeasibilityPopup(false)
     try {
       let locationName = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`
       try {
@@ -113,10 +166,10 @@ export default function SubmitPage() {
       } catch { /* keep fallback */ }
 
       const proposal = await api.proposals.create({
-        title: result.title,
+        title: editedTitle,  // Use edited title
         description_raw: descriptionRaw,
-        description_refined: result.summary,
-        formal_text: result.formal_text,
+        description_refined: editedSummary,  // Use edited summary
+        formal_text: editedFormalText,  // Use edited formal text
         pdf_base64: result.pdf_base64,
         location_name: locationName,
         latitude,
@@ -235,28 +288,90 @@ export default function SubmitPage() {
               <div className="card" style={{ marginBottom: '1.5rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
                   <h2 style={{ fontSize: '1.1rem', fontWeight: 700 }}>✨ Dein Bürgerantrag</h2>
-                  <button className="btn btn-ghost btn-sm" onClick={() => setResult(null)}>← Bearbeiten</button>
+                  <div style={{ display: 'flex', gap: '.5rem' }}>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => setIsEditing(!isEditing)}
+                    >
+                      {isEditing ? '✓ Fertig' : '✏️ Bearbeiten'}
+                    </button>
+                    <button className="btn btn-ghost btn-sm" onClick={() => setResult(null)}>← Zurück</button>
+                  </div>
                 </div>
 
                 <div style={{ marginBottom: '1.25rem' }}>
                   <div style={{ fontSize: '.75rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: '.4rem' }}>Titel</div>
-                  <div style={{ fontSize: '1.15rem', fontWeight: 700 }}>{result.title}</div>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={editedTitle}
+                      onChange={(e) => setEditedTitle(e.target.value)}
+                      style={{
+                        width: '100%',
+                        fontSize: '1.15rem',
+                        fontWeight: 700,
+                        padding: '.5rem',
+                        border: '1px solid var(--border)',
+                        borderRadius: '4px',
+                        background: 'var(--bg)',
+                      }}
+                    />
+                  ) : (
+                    <div style={{ fontSize: '1.15rem', fontWeight: 700 }}>{editedTitle}</div>
+                  )}
                 </div>
 
                 <div style={{ marginBottom: '1.25rem' }}>
                   <div style={{ fontSize: '.75rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: '.4rem' }}>Kurzbeschreibung</div>
-                  <div style={{ lineHeight: 1.7, color: 'var(--text)' }}>{result.summary}</div>
+                  {isEditing ? (
+                    <textarea
+                      value={editedSummary}
+                      onChange={(e) => setEditedSummary(e.target.value)}
+                      rows={4}
+                      style={{
+                        width: '100%',
+                        lineHeight: 1.7,
+                        padding: '.75rem',
+                        border: '1px solid var(--border)',
+                        borderRadius: '4px',
+                        background: 'var(--bg)',
+                        fontFamily: 'inherit',
+                        fontSize: 'inherit',
+                      }}
+                    />
+                  ) : (
+                    <div style={{ lineHeight: 1.7, color: 'var(--text)' }}>{editedSummary}</div>
+                  )}
                 </div>
 
                 <div>
                   <div style={{ fontSize: '.75rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: '.4rem' }}>Formeller Antragstext</div>
-                  <div style={{
-                    background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8,
-                    padding: '1rem', maxHeight: 340, overflowY: 'auto',
-                    whiteSpace: 'pre-wrap', fontSize: '.9rem', lineHeight: 1.7,
-                  }}>
-                    {result.formal_text}
-                  </div>
+                  {isEditing ? (
+                    <textarea
+                      value={editedFormalText}
+                      onChange={(e) => setEditedFormalText(e.target.value)}
+                      rows={15}
+                      style={{
+                        width: '100%',
+                        padding: '1rem',
+                        border: '1px solid var(--border)',
+                        borderRadius: '8px',
+                        background: 'var(--bg)',
+                        whiteSpace: 'pre-wrap',
+                        fontSize: '.9rem',
+                        lineHeight: 1.7,
+                        fontFamily: 'inherit',
+                      }}
+                    />
+                  ) : (
+                    <div style={{
+                      background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8,
+                      padding: '1rem', maxHeight: 340, overflowY: 'auto',
+                      whiteSpace: 'pre-wrap', fontSize: '.9rem', lineHeight: 1.7,
+                    }}>
+                      {editedFormalText}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -269,15 +384,67 @@ export default function SubmitPage() {
                   className="btn btn-primary"
                   style={{ fontSize: '1rem', padding: '.75rem 2rem' }}
                   onClick={handleSubmit}
-                  disabled={submitting}
+                  disabled={submitting || checkingFeasibility}
                 >
-                  {submitting ? 'Wird eingereicht…' : 'Antrag veröffentlichen →'}
+                  {checkingFeasibility ? '🔍 Wird geprüft…' : submitting ? 'Wird eingereicht…' : 'Antrag veröffentlichen →'}
                 </button>
               </div>
             </div>
           )}
         </div>
       </div>
+
+      {/* Feasibility Check Popup */}
+      {showFeasibilityPopup && feasibilityResult && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '1rem',
+          }}
+          onClick={() => setShowFeasibilityPopup(false)}
+        >
+          <div
+            className="card"
+            style={{
+              maxWidth: 500,
+              width: '100%',
+              padding: '2rem',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1rem' }}>
+              {feasibilityResult.is_feasible ? '🔍 Machbarkeitsprüfung' : '⚠️ Hinweis'}
+            </h2>
+            <p style={{ fontSize: '1rem', lineHeight: 1.6, marginBottom: '1.5rem', whiteSpace: 'pre-wrap' }}>
+              {feasibilityResult.assessment}
+            </p>
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+              <button
+                className="btn btn-ghost"
+                onClick={() => setShowFeasibilityPopup(false)}
+              >
+                Abbrechen
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={proceedWithSubmission}
+                disabled={submitting}
+              >
+                {submitting ? 'Wird eingereicht…' : 'Trotzdem veröffentlichen'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }

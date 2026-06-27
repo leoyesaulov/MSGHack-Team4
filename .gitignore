@@ -14,6 +14,11 @@ api/uploads/
 app/node_modules/
 app/dist/
 
-# environment
+# Environment variables (contains secrets!)
 .env
+*.env
+api/.env
+
+# OS
+.DS_Store
 api/.DS_Store

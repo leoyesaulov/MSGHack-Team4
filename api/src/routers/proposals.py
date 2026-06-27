@@ -20,7 +20,7 @@ from ..models import (
     ProposalStatus, User,
 )
 from ..auth import get_current_user, get_current_user_optional, get_current_behoerde
-from ..rag import create_embedding, improve_proposal_text, generate_antrag
+from ..rag import create_embedding, improve_proposal_text, generate_antrag, check_proposal_feasibility
 from ..pdf_generator import generate_buergerantrag_pdf
 
 router = APIRouter(prefix="/proposals", tags=["proposals"])
@@ -567,4 +567,72 @@ async def generate_proposal(
         formal_text=result["formal_text"],
         pdf_base64=base64.b64encode(pdf_bytes).decode(),
     )
+
+
+# ---- Feasibility Check ----
+
+class FeasibilityRequest(BaseModel):
+    title: str
+    description: str
+    location_name: str
+    latitude: float
+    longitude: float
+    category: str
+
+
+class FeasibilityResponse(BaseModel):
+    assessment: str
+    is_feasible: bool  # True = OK/Warning, False = Critical
+
+
+@router.post("/check-feasibility", response_model=FeasibilityResponse)
+async def check_feasibility(
+    payload: FeasibilityRequest,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Check if a new proposal is feasible/realistic based on existing proposals.
+    Returns a short assessment message and feasibility flag.
+    """
+    # Get all existing proposals from the same Gemeinde
+    gemeinde = current_user.gemeinde
+    existing_proposals = session.exec(
+        select(Proposal).where(Proposal.gemeinde == gemeinde)
+    ).all()
+
+    # Convert to dict format
+    existing_dict = [
+        {
+            "title": p.title,
+            "status": p.status.value,
+            "category": p.category or "",
+            "location_name": p.location_name or "",
+            "latitude": p.latitude,
+            "longitude": p.longitude,
+            "description_raw": p.description_raw or "",
+        }
+        for p in existing_proposals
+    ]
+
+    # Call LLM for assessment with web research
+    assessment = await check_proposal_feasibility(
+        title=payload.title,
+        description=payload.description,
+        location_name=payload.location_name,
+        latitude=payload.latitude,
+        longitude=payload.longitude,
+        category=payload.category,
+        existing_proposals=existing_dict,
+        gemeinde=gemeinde or "Deutschland",
+    )
+
+    # Determine if feasible based on response prefix
+    is_feasible = not assessment.startswith("✗")
+
+    return FeasibilityResponse(
+        assessment=assessment,
+        is_feasible=is_feasible,
+    )
+
 
