@@ -17,7 +17,10 @@ jobs:
       - name: Execute Build Commands
         run: |
           docker build -t team4.api .
-          docker run -d -p 8000:8000 team4.api
+          docker rm -f team4-api-ci || true
+          docker run -d --rm --name team4-api-ci -p 127.0.0.1::8000 team4.api
+          docker ps --filter "name=team4-api-ci" --filter "status=running" --quiet | grep -q .
+          docker stop team4-api-ci
           # echo "This is running directly on the EC2 hardware"
           # E.g., docker build, make install, or ollama model pulling
           # docker compose up -d --build
