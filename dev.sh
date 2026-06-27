@@ -1,15 +1,23 @@
 #!/usr/bin/env bash
 set -e
 
+# Kill anything still on the ports from a previous run
+fuser -k 8000/tcp 2>/dev/null || true
+fuser -k 5173/tcp 2>/dev/null || true
+
 echo "==> Setting up API venv..."
 cd api
-python3 -m venv .venv
+# Only create the venv if it doesn't exist yet
+if [ ! -f .venv/bin/activate ]; then
+  python3 -m venv .venv
+fi
 .venv/bin/pip install -q -r requirements.txt
 cd ..
 
 echo "==> Starting API (port 8000)..."
 cd api
-.venv/bin/uvicorn src.main:app --reload --host 0.0.0.0 --port 8000 &
+# Exclude .venv from watchfiles so installing packages doesn't trigger reloads
+.venv/bin/uvicorn src.main:app --reload --reload-exclude '.venv' --host 0.0.0.0 --port 8000 &
 API_PID=$!
 cd ..
 
