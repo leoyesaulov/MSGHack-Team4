@@ -15,7 +15,6 @@ from ..models import (
     ProposalStatus, User,
 )
 from ..auth import get_current_user, get_current_user_optional, get_current_behoerde
-from ..quorum import calculate_threshold
 
 router = APIRouter(prefix="/proposals", tags=["proposals"])
 
@@ -69,11 +68,9 @@ def create_proposal(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
-    threshold = calculate_threshold(current_user.bundesland, current_user.population)
     proposal = Proposal.model_validate(payload, update={
         "author_id": current_user.id,
         "gemeinde": current_user.gemeinde,
-        "threshold": threshold,
     })
     session.add(proposal)
     session.commit()
