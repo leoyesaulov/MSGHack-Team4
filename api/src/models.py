@@ -32,8 +32,6 @@ class UserBase(SQLModel):
     email: str = Field(unique=True, index=True)
     district: Optional[str] = None
     gemeinde: Optional[str] = Field(default=None, index=True)
-    bundesland: Optional[str] = Field(default=None)       # ISO code e.g. "DE-BY"
-    population: Optional[int] = Field(default=None)       # Einwohnerzahl from Nominatim
 
 
 class User(UserBase, table=True):
@@ -53,16 +51,12 @@ class UserCreate(SQLModel):
     password: str
     district: Optional[str] = None
     gemeinde: Optional[str] = None
-    bundesland: Optional[str] = None
-    population: Optional[int] = None
 
 
 class UserRead(UserBase):
     id: int
     is_behoerde: bool
     gemeinde: Optional[str]
-    bundesland: Optional[str]
-    population: Optional[int]
     created_at: datetime
 
 

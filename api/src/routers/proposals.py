@@ -72,11 +72,9 @@ def create_proposal(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
-    threshold = calculate_threshold(current_user.bundesland, current_user.population)
     proposal = Proposal.model_validate(payload, update={
         "author_id": current_user.id,
         "gemeinde": current_user.gemeinde,
-        "threshold": threshold,
     })
 
     # Generate embedding for new proposal

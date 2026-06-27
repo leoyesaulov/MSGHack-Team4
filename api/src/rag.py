@@ -1,13 +1,14 @@
 """RAG (Retrieval-Augmented Generation) utilities for proposal improvement."""
 import boto3
+import os
 from typing import List
 
-# AWS Bedrock client with region and credentials
+# AWS Bedrock client - credentials from environment variables
 bedrock = boto3.client(
     "bedrock-runtime",
-    region_name="eu-north-1",
-    aws_access_key_id="AKIAQ6TWLS7KZDT2ZIW2",
-    aws_secret_access_key="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"
+    region_name=os.getenv("AWS_REGION", "eu-north-1"),
+    aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+    aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY")
 )
 
 
