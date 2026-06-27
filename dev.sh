@@ -16,6 +16,10 @@ cd ..
 
 echo "==> Starting API (port 8000)..."
 cd api
+# Load .env from repo root if present
+if [ -f ../.env ]; then
+  set -a; source ../.env; set +a
+fi
 # Exclude .venv from watchfiles so installing packages doesn't trigger reloads
 .venv/bin/uvicorn src.main:app --reload --reload-exclude '.venv' --host 0.0.0.0 --port 8000 &
 API_PID=$!
