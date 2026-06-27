@@ -3,9 +3,11 @@ from typing import Optional
 from pathlib import Path
 import uuid
 import shutil
+import json
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
 from sqlmodel import Session, select, func
+from pydantic import BaseModel
 
 from ..database import get_session
 from ..models import (
@@ -15,6 +17,7 @@ from ..models import (
     ProposalStatus, User,
 )
 from ..auth import get_current_user, get_current_user_optional, get_current_behoerde
+from ..rag import create_embedding, find_similar_proposals, improve_proposal_text
 
 router = APIRouter(prefix="/proposals", tags=["proposals"])
 
@@ -72,6 +75,19 @@ def create_proposal(
         "author_id": current_user.id,
         "gemeinde": current_user.gemeinde,
     })
+
+    # Generate embedding for new proposal
+    try:
+        from ..rag import create_embedding
+        import json
+        full_text = f"{proposal.title}\n\n{proposal.description_raw}"
+        if proposal.description_refined:
+            full_text += f"\n\n{proposal.description_refined}"
+        embedding_vec = create_embedding(full_text)
+        proposal.embedding = json.dumps(embedding_vec)
+    except Exception as e:
+        print(f"Warning: Could not create embedding for new proposal: {e}")
+
     session.add(proposal)
     session.commit()
     session.refresh(proposal)
@@ -123,9 +139,34 @@ def update_proposal(
         raise HTTPException(status_code=404, detail="Proposal not found")
     if not current_user.is_behoerde and proposal.author_id != current_user.id:
         raise HTTPException(status_code=403, detail="Nicht autorisiert")
+
+    # Track if status changes to accepted
+    status_changed_to_accepted = False
+    if "status" in payload.model_dump(exclude_unset=True):
+        new_status = payload.model_dump(exclude_unset=True)["status"]
+        if new_status == ProposalStatus.accepted and proposal.status != ProposalStatus.accepted:
+            status_changed_to_accepted = True
+
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(proposal, field, value)
     proposal.updated_at = datetime.utcnow()
+
+    # Generate embedding if status changed to accepted and no embedding exists
+    if status_changed_to_accepted and not proposal.embedding:
+        try:
+            from ..rag import create_embedding
+            import json
+            full_text = f"{proposal.title}\n\n{proposal.description_raw}"
+            if proposal.description_refined:
+                full_text += f"\n\n{proposal.description_refined}"
+            if proposal.formal_text:
+                full_text += f"\n\n{proposal.formal_text}"
+            embedding_vec = create_embedding(full_text)
+            proposal.embedding = json.dumps(embedding_vec)
+            print(f"Generated embedding for accepted proposal #{proposal.id}")
+        except Exception as e:
+            print(f"Warning: Could not create embedding for accepted proposal: {e}")
+
     session.add(proposal)
     session.commit()
     session.refresh(proposal)
@@ -280,3 +321,71 @@ def add_comment(
     r.author_username = current_user.username
     r.author_display_name = current_user.display_name
     return r
+
+
+# ---- RAG: AI-powered text improvement ----
+
+class ImproveTextRequest(BaseModel):
+    text: str
+
+
+class ImproveTextResponse(BaseModel):
+    improved_text: str
+    similar_examples: list[dict]
+
+
+@router.post("/improve-text", response_model=ImproveTextResponse)
+def improve_text(
+    payload: ImproveTextRequest,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    RAG endpoint: Takes user's raw proposal text, finds similar examples from DB,
+    and uses LLM to improve the text.
+    """
+    user_text = payload.text.strip()
+    if not user_text:
+        raise HTTPException(status_code=400, detail="Text darf nicht leer sein")
+
+    # 1. Create embedding for user's text
+    query_embedding = create_embedding(user_text)
+
+    # 2. Fetch only ACCEPTED proposals with embeddings from DB
+    proposals_with_embeddings = session.exec(
+        select(
+            Proposal.id,
+            Proposal.title,
+            Proposal.description_raw,
+            Proposal.description_refined,
+            Proposal.formal_text,
+            Proposal.embedding
+        ).where(
+            Proposal.embedding.isnot(None),
+            Proposal.status == ProposalStatus.accepted
+        )
+    ).all()
+
+    # Convert to list of tuples for find_similar_proposals
+    proposals_list = [
+        (p.id, p.title, p.description_raw, p.description_refined or "", p.formal_text or "", p.embedding)
+        for p in proposals_with_embeddings
+    ]
+
+    # 3. Find 3 most similar proposals
+    similar = find_similar_proposals(query_embedding, proposals_list, top_k=3)
+
+    # 4. Call LLM to improve text
+    improved = improve_proposal_text(user_text, similar)
+
+    return ImproveTextResponse(
+        improved_text=improved,
+        similar_examples=[
+            {
+                "title": ex["title"],
+                "similarity": round(ex["similarity"], 3)
+            }
+            for ex in similar
+        ]
+    )
+

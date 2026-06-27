@@ -8,6 +8,7 @@ from .database import create_db_and_tables
 from .routers import proposals
 from .routers import auth
 from .seed import seed
+from .load_csv import load_buergerantraege_csv
 
 UPLOADS_DIR = Path(__file__).parent.parent / "uploads"
 UPLOADS_DIR.mkdir(exist_ok=True)
@@ -17,6 +18,7 @@ UPLOADS_DIR.mkdir(exist_ok=True)
 async def lifespan(app: FastAPI):
     create_db_and_tables()
     seed()
+    load_buergerantraege_csv()  # Load CSV data with embeddings
     yield
 
 

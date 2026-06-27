@@ -86,6 +86,12 @@ export const api = {
       }
       return res.json()
     },
+    improveText: async (text: string): Promise<{ improved_text: string; similar_examples: Array<{ title: string; similarity: number }> }> => {
+      return request('/proposals/improve-text', {
+        method: 'POST',
+        body: JSON.stringify({ text })
+      })
+    },
   },
 
   votes: {

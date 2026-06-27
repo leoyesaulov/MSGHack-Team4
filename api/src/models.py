@@ -81,6 +81,7 @@ class Proposal(ProposalBase, table=True):
     author_id: int = Field(foreign_key="user.id")
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
+    embedding: Optional[str] = None  # JSON-encoded vector for RAG
     author: Optional[User] = Relationship(back_populates="proposals")
     votes: list["Vote"] = Relationship(back_populates="proposal")
     comments: list["Comment"] = Relationship(back_populates="proposal")

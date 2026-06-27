@@ -25,6 +25,8 @@ export default function SubmitPage() {
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [improving, setImproving] = useState(false)
+  const [improvedText, setImprovedText] = useState<string | null>(null)
 
   useEffect(() => {
     if (!user) navigate('/login')
@@ -46,6 +48,31 @@ export default function SubmitPage() {
       setImagePreview(url)
     } else {
       setImagePreview(null)
+    }
+  }
+
+  async function handleImproveText() {
+    if (!form.description_raw.trim()) {
+      toast('Bitte gib zuerst deine Idee ein.', 'error')
+      return
+    }
+    setImproving(true)
+    try {
+      const response = await api.proposals.improveText(form.description_raw)
+      setImprovedText(response.improved_text)
+      toast('Text wurde von der KI verbessert! Du kannst ihn jetzt weiter anpassen.')
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : 'Fehler bei der KI-Verbesserung.', 'error')
+    } finally {
+      setImproving(false)
+    }
+  }
+
+  function applyImprovedText() {
+    if (improvedText) {
+      setForm((prev) => ({ ...prev, description_raw: improvedText }))
+      setImprovedText(null)
+      toast('Verbesserter Text übernommen!')
     }
   }
 
@@ -137,7 +164,65 @@ export default function SubmitPage() {
                 placeholder="Beschreib das Problem und was du dir wünschst – so wie du es einem Nachbarn erzählen würdest."
                 rows={5}
               />
+              <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={handleImproveText}
+                  disabled={improving || !form.description_raw.trim()}
+                  style={{ fontSize: '0.9rem' }}
+                >
+                  {improving ? '✨ KI arbeitet...' : '✨ Von KI verbessern lassen'}
+                </button>
+                <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>
+                  Basierend auf erfolgreichen Anträgen
+                </span>
+              </div>
             </div>
+
+            {/* Show improved text if available */}
+            {improvedText && (
+              <div className="card" style={{ background: 'var(--brand-light)', border: '2px solid var(--brand)', padding: '1rem', marginBottom: '1.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.75rem' }}>
+                  <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--brand)' }}>✨ Verbesserter Text von der KI</h3>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => setImprovedText(null)}
+                    style={{ fontSize: '1.2rem', padding: '0.25rem 0.5rem' }}
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div style={{
+                  background: 'white',
+                  padding: '1rem',
+                  borderRadius: '8px',
+                  marginBottom: '0.75rem',
+                  whiteSpace: 'pre-wrap',
+                  fontSize: '0.95rem',
+                  lineHeight: '1.6'
+                }}>
+                  {improvedText}
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    onClick={applyImprovedText}
+                  >
+                    ✓ Text übernehmen
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => setImprovedText(null)}
+                  >
+                    Verwerfen
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div className="form-group">
               <label>Ort auf der Karte markieren *</label>
