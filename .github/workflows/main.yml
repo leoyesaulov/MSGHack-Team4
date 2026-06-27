@@ -1,0 +1,23 @@
+name: EC2 Native Build
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-on-ec2:
+    # This targets your EC2 instance running the GitHub Actions agent
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Execute Build Commands
+        run: 
+          docker build -t team4.api .
+          docker run -d -p 8000:8000 team4.api
+          # echo "This is running directly on the EC2 hardware"
+          # E.g., docker build, make install, or ollama model pulling
+          # docker compose up -d --build
