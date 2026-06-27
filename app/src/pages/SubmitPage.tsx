@@ -112,7 +112,7 @@ export default function SubmitPage() {
                 { n: '1', t: 'Idee beschreiben', d: 'Schreib einfach auf Deutsch, was du dir wünschst.' },
                 { n: '2', t: 'Veröffentlichen', d: 'Dein Vorschlag erscheint auf der Karte und im Feed.' },
                 { n: '3', t: 'Nachbarschaft stimmt ab', d: 'Andere Bürger können unterstützen & kommentieren.' },
-                { n: '4', t: 'Antrag wird versandt', d: 'Bei 50 Unterstützern wird automatisch ein formaler Antrag generiert.' },
+                { n: '4', t: 'Antrag wird versandt', d: 'Bei über 50 Unterstützern wird automatisch ein formaler Antrag generiert.' },
               ].map((s) => (
                 <div key={s.n} className="wizard-step">
                   <div className="wizard-step-num">{s.n}</div>

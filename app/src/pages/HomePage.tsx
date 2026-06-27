@@ -9,9 +9,7 @@ import { STATUS_LABEL } from '../lib/statusLabels'
 const STATUS_FILTERS: { label: string; value: string }[] = [
   { label: 'Alle', value: '' },
   { label: STATUS_LABEL.open, value: 'open' },
-  { label: STATUS_LABEL.threshold_reached, value: 'threshold_reached' },
   { label: STATUS_LABEL.submitted, value: 'submitted' },
-  { label: STATUS_LABEL.in_review, value: 'in_review' },
   { label: STATUS_LABEL.accepted, value: 'accepted' },
 ]
 
@@ -31,8 +29,7 @@ export default function HomePage() {
   const stats = {
     total: proposals.length,
     open: proposals.filter((p) => p.status === 'open').length,
-    threshold: proposals.filter((p) => p.status === 'threshold_reached').length,
-    submitted: proposals.filter((p) => ['submitted', 'in_review', 'accepted'].includes(p.status)).length,
+    submitted: proposals.filter((p) => ['submitted', 'accepted'].includes(p.status)).length,
   }
 
   return (
@@ -51,8 +48,7 @@ export default function HomePage() {
         <div className="stats">
           <div className="stat"><div className="stat-value">{stats.total}</div><div className="stat-label">Vorschläge gesamt</div></div>
           <div className="stat"><div className="stat-value">{stats.open}</div><div className="stat-label">Offen & aktiv</div></div>
-          <div className="stat"><div className="stat-value">{stats.threshold}</div><div className="stat-label">Schwellenwert erreicht</div></div>
-          <div className="stat"><div className="stat-value">{stats.submitted}</div><div className="stat-label">Eingereicht / in Bearbeitung</div></div>
+          <div className="stat"><div className="stat-value">{stats.submitted}</div><div className="stat-label">Eingereicht / Angenommen</div></div>
         </div>
 
         {/* Filters */}

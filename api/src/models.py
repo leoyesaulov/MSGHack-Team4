@@ -7,9 +7,7 @@ from sqlmodel import Field, SQLModel, Relationship
 class ProposalStatus(str, Enum):
     draft = "draft"
     open = "open"
-    threshold_reached = "threshold_reached"
     submitted = "submitted"
-    in_review = "in_review"
     accepted = "accepted"
     rejected = "rejected"
 
@@ -36,6 +34,7 @@ class UserBase(SQLModel):
 class User(UserBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     hashed_password: str
+    is_behoerde: bool = Field(default=False)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     proposals: list["Proposal"] = Relationship(back_populates="author")
     votes: list["Vote"] = Relationship(back_populates="user")
@@ -52,6 +51,7 @@ class UserCreate(SQLModel):
 
 class UserRead(UserBase):
     id: int
+    is_behoerde: bool
     created_at: datetime
 
 

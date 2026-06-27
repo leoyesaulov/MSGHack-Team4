@@ -48,6 +48,12 @@ def get_current_user(token: str = Depends(oauth2_scheme), session: Session = Dep
     return user
 
 
+def get_current_behoerde(current_user: User = Depends(get_current_user)) -> User:
+    if not current_user.is_behoerde:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Nur Behördenaccounts haben Zugriff")
+    return current_user
+
+
 def get_current_user_optional(token: Optional[str] = Depends(OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)), session: Session = Depends(get_session)) -> Optional[User]:
     if not token:
         return None

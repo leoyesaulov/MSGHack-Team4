@@ -47,6 +47,7 @@ def login(form: OAuth2PasswordRequestForm = Depends(), session: Session = Depend
             "display_name": user.display_name,
             "email": user.email,
             "district": user.district,
+            "is_behoerde": user.is_behoerde,
         },
     }
 

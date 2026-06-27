@@ -3,13 +3,11 @@ import type { ProposalStatus } from '../lib/types'
 const STEPS: { key: ProposalStatus | '_collect'; label: string }[] = [
   { key: 'open', label: 'Eingabe & Veröffentlichung' },
   { key: '_collect', label: 'Unterschriften sammeln' },
-  { key: 'threshold_reached', label: 'Schwellenwert erreicht' },
-  { key: 'submitted', label: 'Antrag generiert & versandt' },
-  { key: 'in_review', label: 'In Bearbeitung' },
+  { key: 'submitted', label: 'Antrag eingereicht' },
   { key: 'accepted', label: 'Angenommen' },
 ]
 
-const ORDER: (ProposalStatus | '_collect')[] = ['open', '_collect', 'threshold_reached', 'submitted', 'in_review', 'accepted']
+const ORDER: (ProposalStatus | '_collect')[] = ['open', '_collect', 'submitted', 'accepted']
 
 function effectiveKey(status: ProposalStatus): ProposalStatus | '_collect' {
   if (status === 'open') return '_collect'

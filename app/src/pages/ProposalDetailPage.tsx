@@ -194,7 +194,7 @@ export default function ProposalDetailPage() {
               <ProgressBar value={proposal.vote_count} max={proposal.threshold} />
               {pct >= 100 ? (
                 <div style={{ marginTop: '1rem', padding: '.75rem', background: '#dcfce7', borderRadius: 8, fontSize: '.85rem', color: '#166534', textAlign: 'center', fontWeight: 600 }}>
-                  ✅ Schwellenwert erreicht! Antrag wird bearbeitet.
+                  ✅ Antrag wurde eingereicht und wird von der Behörde bearbeitet.
                 </div>
               ) : (
                 <button

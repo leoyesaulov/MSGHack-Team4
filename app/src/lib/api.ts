@@ -58,9 +58,12 @@ export const api = {
       if (params?.category) q.set('category', params.category)
       return request<Proposal[]>(`/proposals/?${q}`)
     },
+    behoerdeInbox: () => request<Proposal[]>('/proposals/behoerde/inbox'),
     get: (id: number) => request<Proposal>(`/proposals/${id}`),
     create: (payload: ProposalCreatePayload) =>
       request<Proposal>('/proposals/', { method: 'POST', body: JSON.stringify(payload) }),
+    patch: (id: number, payload: Partial<{ status: string; department: string; formal_text: string }>) =>
+      request<Proposal>(`/proposals/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
     uploadImage: async (proposalId: number, file: File): Promise<Proposal> => {
       const token = getToken()
       const form = new FormData()

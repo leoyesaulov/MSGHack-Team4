@@ -1,9 +1,7 @@
 export type ProposalStatus =
   | 'draft'
   | 'open'
-  | 'threshold_reached'
   | 'submitted'
-  | 'in_review'
   | 'accepted'
   | 'rejected'
 

@@ -7,6 +7,8 @@ import ProposalDetailPage from './pages/ProposalDetailPage'
 import MyProposalsPage from './pages/MyProposalsPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
+import AboutPage from './pages/AboutPage'
+import BehoerdePage from './pages/BehoerdePage'
 
 function Nav() {
   const { user, clearAuth } = useAuthStore()
@@ -22,9 +24,11 @@ function Nav() {
       <span className="nav-logo">City<span>Voice</span></span>
       <NavLink to="/" end>Übersicht</NavLink>
       <NavLink to="/map">Karte</NavLink>
-      {user && <NavLink to="/submit">+ Idee einreichen</NavLink>}
-      {user && <NavLink to="/meine-antraege">Meine Anträge</NavLink>}
+      {user && !user.is_behoerde && <NavLink to="/submit">+ Idee einreichen</NavLink>}
+      {user?.is_behoerde && <NavLink to="/behoerde">Anträge</NavLink>}
+      {user && !user.is_behoerde && <NavLink to="/meine-antraege">Meine Anträge</NavLink>}
       <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '.75rem' }}>
+        <NavLink to="/about">Über CityVoice</NavLink>
         {user ? (
           <>
             <span style={{ fontSize: '.85rem', color: 'var(--muted)', fontWeight: 500 }}>
@@ -57,6 +61,8 @@ export default function App() {
         <Route path="/meine-antraege" element={<MyProposalsPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/behoerde" element={<BehoerdePage />} />
       </Routes>
     </BrowserRouter>
   )

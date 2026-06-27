@@ -14,7 +14,7 @@ from ..models import (
     Comment, CommentCreate, CommentRead,
     ProposalStatus, User,
 )
-from ..auth import get_current_user, get_current_user_optional
+from ..auth import get_current_user, get_current_user_optional, get_current_behoerde
 
 router = APIRouter(prefix="/proposals", tags=["proposals"])
 
@@ -73,6 +73,25 @@ def create_proposal(
     return _enrich(proposal, session, request)
 
 
+@router.get("/behoerde/inbox", response_model=list[ProposalRead])
+def behoerde_inbox(
+    request: Request,
+    session: Session = Depends(get_session),
+    _: User = Depends(get_current_behoerde),
+):
+    """All proposals that have reached or passed the threshold — visible only to Behörde accounts."""
+    actionable_statuses = [
+        ProposalStatus.submitted,
+        ProposalStatus.accepted,
+        ProposalStatus.rejected,
+    ]
+    q = select(Proposal).where(Proposal.status.in_(actionable_statuses)).order_by(Proposal.updated_at.desc())
+    proposals = session.exec(q).all()
+    for p in proposals:
+        _ = p.author
+    return [_enrich(p, session, request) for p in proposals]
+
+
 @router.get("/{proposal_id}", response_model=ProposalRead)
 def get_proposal(proposal_id: int, request: Request, session: Session = Depends(get_session)):
     proposal = session.get(Proposal, proposal_id)
@@ -93,7 +112,7 @@ def update_proposal(
     proposal = session.get(Proposal, proposal_id)
     if not proposal:
         raise HTTPException(status_code=404, detail="Proposal not found")
-    if proposal.author_id != current_user.id:
+    if not current_user.is_behoerde and proposal.author_id != current_user.id:
         raise HTTPException(status_code=403, detail="Nicht autorisiert")
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(proposal, field, value)
@@ -182,8 +201,8 @@ def add_vote(
         select(func.count()).where(Vote.proposal_id == proposal_id)
     ).one() + 1
 
-    if proposal.status == ProposalStatus.open and vote_count >= proposal.threshold:
-        proposal.status = ProposalStatus.threshold_reached
+    if proposal.status == ProposalStatus.open and vote_count > proposal.threshold:
+        proposal.status = ProposalStatus.submitted
         proposal.updated_at = datetime.utcnow()
         session.add(proposal)
 

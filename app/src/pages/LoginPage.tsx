@@ -79,7 +79,7 @@ export default function LoginPage() {
           <div className="card" style={{ marginTop: '1rem', background: 'var(--brand-light)', border: '1px solid #bfdbfe' }}>
             <p style={{ fontSize: '.82rem', color: 'var(--brand)', fontWeight: 600, marginBottom: '.35rem' }}>Demo-Zugangsdaten</p>
             <p style={{ fontSize: '.82rem', color: 'var(--muted)' }}>
-              Benutzername: <code style={{ background: 'white', padding: '.1rem .3rem', borderRadius: 4 }}>maria_m</code>
+              Benutzername: <code style={{ background: 'white', padding: '.1rem .3rem', borderRadius: 4 }}>stefan_m</code>
               &nbsp;&nbsp;Passwort: <code style={{ background: 'white', padding: '.1rem .3rem', borderRadius: 4 }}>demo1234</code>
             </p>
           </div>

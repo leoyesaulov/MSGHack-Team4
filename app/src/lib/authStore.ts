@@ -7,6 +7,7 @@ export interface AuthUser {
   display_name: string
   email: string
   district: string | null
+  is_behoerde: boolean
 }
 
 interface AuthState {

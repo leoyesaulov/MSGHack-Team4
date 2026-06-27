@@ -9,7 +9,7 @@ import Pipeline from '../components/Pipeline'
 import { STATUS_LABEL } from '../lib/statusLabels'
 import type { ProposalStatus } from '../lib/types'
 
-const STATUS_STEPS: ProposalStatus[] = ['open', 'threshold_reached', 'submitted', 'in_review', 'accepted', 'rejected']
+const STATUS_STEPS: ProposalStatus[] = ['open', 'submitted', 'accepted', 'rejected']
 
 export default function MyProposalsPage() {
   const user = useAuthStore((s) => s.user)
