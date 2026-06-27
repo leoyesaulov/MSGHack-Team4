@@ -9,7 +9,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - cityvoice_db:/var/lib/postgresql/data
+      - cityvoice_db:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dbuser} -d ${POSTGRES_DB:-cityvoice}"]
       interval: 5s
@@ -42,6 +42,7 @@ services:
       dockerfile: Dockerfile
     ports:
       - "80:80"
+    restart: on-failure
     depends_on:
       - api
 
