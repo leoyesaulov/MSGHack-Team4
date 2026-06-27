@@ -1,0 +1,15 @@
+# Python
+api/.venv/
+api/__pycache__/
+api/src/__pycache__/
+api/src/routers/__pycache__/
+**/__pycache__/
+*.pyc
+
+# Database & uploads (runtime data)
+api/cityvoice.db
+api/uploads/
+
+# Node
+app/node_modules/
+app/dist/
