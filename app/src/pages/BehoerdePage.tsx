@@ -25,104 +25,10 @@ const DEPT_OPTIONS = [
   'Sonstige',
 ]
 
-function generatePdfHtml(p: Proposal): string {
-  const date = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
-  const statusLabel: Record<string, string> = {
-    submitted: 'Eingereicht',
-    accepted: 'Angenommen',
-    rejected: 'Abgelehnt',
-  }
-  return `<!DOCTYPE html>
-<html lang="de">
-<head>
-  <meta charset="UTF-8">
-  <title>Bürgerantrag – ${p.title}</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Arial, sans-serif; font-size: 11pt; color: #1a1a1a; line-height: 1.6; padding: 2.5cm; }
-    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 2px solid #2563eb; }
-    .header-left h1 { font-size: 18pt; font-weight: 900; color: #2563eb; }
-    .header-left p { font-size: 9pt; color: #555; margin-top: .2rem; }
-    .header-right { text-align: right; font-size: 9pt; color: #555; }
-    .meta-table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; }
-    .meta-table td { padding: .4rem .5rem; border: 1px solid #ddd; font-size: 10pt; }
-    .meta-table td:first-child { font-weight: 700; background: #f5f5f5; width: 35%; }
-    h2 { font-size: 12pt; font-weight: 700; margin-bottom: .5rem; margin-top: 1.25rem; color: #2563eb; border-bottom: 1px solid #ddd; padding-bottom: .25rem; }
-    .citizen-text { background: #f9f9f9; border-left: 3px solid #2563eb; padding: .75rem 1rem; font-style: italic; color: #444; margin-bottom: 1rem; }
-    .formal-text { background: #f9f9f9; border: 1px solid #ddd; padding: 1rem; white-space: pre-wrap; font-size: 10.5pt; line-height: 1.8; }
-    .formal-placeholder { color: #999; font-style: italic; }
-    .stamp-area { margin-top: 2.5rem; display: flex; gap: 3rem; }
-    .stamp-box p { font-size: 9pt; color: #555; margin-bottom: 2.5rem; }
-    .stamp-line { border-top: 1px solid #333; padding-top: .25rem; font-size: 8.5pt; color: #555; }
-    .footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #ddd; font-size: 8.5pt; color: #888; display: flex; justify-content: space-between; }
-    @media print { body { padding: 1.5cm; } }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <div class="header-left">
-      <h1>CityVoice</h1>
-      <p>Digitale Bürgerbeteiligung · Gemeinde Ismaning</p>
-    </div>
-    <div class="header-right">
-      <strong>BÜRGERANTRAG</strong><br>
-      Antrag-Nr.: CV-${String(p.id).padStart(5, '0')}<br>
-      Erstellt: ${date}
-    </div>
-  </div>
 
-  <table class="meta-table">
-    <tr><td>Betreff</td><td><strong>${p.title}</strong></td></tr>
-    <tr><td>Eingereicht von</td><td>${p.author_display_name} (@${p.author_username})</td></tr>
-    <tr><td>Standort</td><td>${p.location_name}</td></tr>
-    <tr><td>Koordinaten</td><td>${p.latitude.toFixed(5)}, ${p.longitude.toFixed(5)}</td></tr>
-    <tr><td>Kategorie</td><td>${p.category}</td></tr>
-    <tr><td>Zuständiges Amt</td><td>${p.department ?? '— noch nicht zugewiesen —'}</td></tr>
-    <tr><td>Unterstützerstimmen</td><td><strong>${p.vote_count}</strong> von ${p.threshold} erforderlichen</td></tr>
-    <tr><td>Status</td><td>${statusLabel[p.status] ?? p.status}</td></tr>
-    <tr><td>Eingangsdatum</td><td>${new Date(p.created_at).toLocaleDateString('de-DE')}</td></tr>
-  </table>
-
-  <h2>Originale Bürgereingabe</h2>
-  <div class="citizen-text">${p.description_raw.replace(/\n/g, '<br>')}</div>
-
-  <h2>Formaler Behördenantrag</h2>
-  ${p.formal_text
-    ? `<div class="formal-text">${p.formal_text.replace(/\n/g, '<br>')}</div>`
-    : `<div class="formal-text formal-placeholder">Dieser Abschnitt wird durch KI-gestützte Antragsgenerierung automatisch befüllt (Funktion in Vorbereitung).</div>`
-  }
-
-  <div class="stamp-area">
-    <div class="stamp-box">
-      <p>Datum, Unterschrift Sachbearbeiter/in</p>
-      <div class="stamp-line">Gemeinde Ismaning</div>
-    </div>
-    <div class="stamp-box">
-      <p>Datum, Genehmigungsvermerk</p>
-      <div class="stamp-line">Amtsleitung</div>
-    </div>
-    <div class="stamp-box">
-      <p>Dienststempel</p>
-      <div class="stamp-line">&nbsp;</div>
-    </div>
-  </div>
-
-  <div class="footer">
-    <span>CityVoice · Digitale Bürgerbeteiligung · Gemeinde Ismaning</span>
-    <span>Antrag-Nr. CV-${String(p.id).padStart(5, '0')} · ${date}</span>
-  </div>
-</body>
-</html>`
-}
 
 function downloadPdf(p: Proposal) {
-  const html = generatePdfHtml(p)
-  const win = window.open('', '_blank')
-  if (!win) { toast('Popup-Fenster wurde blockiert. Bitte erlauben.', 'error'); return }
-  win.document.write(html)
-  win.document.close()
-  win.focus()
-  setTimeout(() => { win.print() }, 400)
+  window.open(`/api/proposals/${p.id}/pdf`, '_blank')
 }
 
 export default function BehoerdePage() {

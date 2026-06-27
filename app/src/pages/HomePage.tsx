@@ -37,7 +37,7 @@ export default function HomePage() {
       {/* Hero */}
       <div className="hero">
         <h1>Deine Idee. Deine Stadt.</h1>
-        <p>Reiche Vorschläge für dein Viertel ein, sammle Unterstützung und bring Veränderungen in Gang – ohne bürokratische Hürden.</p>
+        <p>Reiche Vorschläge für dein Viertel ein, sammle Unterstützung und bring Veränderungen in Gang ohne bürokratische Hürden.</p>
         <button className="btn" style={{ background: 'white', color: 'var(--brand)', fontWeight: 700, fontSize: '1rem', padding: '.75rem 2rem' }} onClick={() => navigate('/submit')}>
           Jetzt Idee einreichen →
         </button>

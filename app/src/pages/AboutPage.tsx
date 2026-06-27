@@ -49,8 +49,8 @@ export default function AboutPage() {
               icon: '📄',
               title: 'Formaler Antrag (KI)',
               desc: 'Aus der Bürgeridee wird ein formaler Behördenantrag in Amtsdeutsch generiert, der automatisch an die zuständige Stelle (z. B. Tiefbauamt, Grünflächenamt) weitergeleitet wird.',
-              tag: 'Schritt 5 · geplant',
-              planned: true,
+              tag: 'Schritt 5',
+              planned: false,
             },
             {
               icon: '📬',

@@ -7,6 +7,7 @@ import {
 } from "react-router-dom";
 import { useState } from "react";
 import { useAuthStore } from "./lib/authStore";
+import { Navigate } from "react-router-dom";
 import HomePage from "./pages/HomePage";
 import MapPage from "./pages/MapPage";
 import SubmitPage from "./pages/SubmitPage";
@@ -191,12 +192,11 @@ function Nav() {
   );
 }
 
-export default function App() {
+function AppRoutes() {
+  const user = useAuthStore((s) => s.user);
   return (
-    <BrowserRouter>
-      <Nav />
-      <Routes>
-        <Route path="/" element={<HomePage />} />
+    <Routes>
+      <Route path="/" element={user ? <HomePage /> : <Navigate to="/login" replace />} />
         <Route path="/map" element={<MapPage />} />
         <Route path="/submit" element={<SubmitPage />} />
         <Route path="/proposals/:id" element={<ProposalDetailPage />} />
@@ -207,6 +207,14 @@ export default function App() {
         <Route path="/behoerde" element={<BehoerdePage />} />
         <Route path="/profil" element={<ProfilePage />} />
       </Routes>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Nav />
+      <AppRoutes />
     </BrowserRouter>
   );
 }
