@@ -29,7 +29,7 @@ class District(Base):
     id = Column(Integer, primary_key=True)
     ars = Column(String(12), unique=True, nullable=False)
     name = Column(String(100), nullable=False)
-    state = Column(String(100), nullable=False)
+    bundesland = Column(String(100), nullable=False)
     population = Column(Integer, nullable=False)
     last_updated = Column(DateTime)
     rule_type = Column(String(20), default='percentage') #fixed, percentage, mixed
