@@ -1,8 +1,12 @@
+import os
 from sqlmodel import SQLModel, Session, create_engine
 
-DATABASE_URL = "sqlite:///./cityvoice.db"
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "postgresql://dbuser:dbpass@172.18.0.3:5432/cityvoice",
+)
 
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+engine = create_engine(DATABASE_URL)
 
 
 def create_db_and_tables():
