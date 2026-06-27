@@ -1,6 +1,23 @@
 version: '3.9'
 
 services:
+  db:
+    image: pgvector/pgvector:pg18
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-dbuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dbpass}
+      POSTGRES_DB: ${POSTGRES_DB:-cityvoice}
+    ports:
+      - "5432:5432"
+    volumes:
+      - cityvoice_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dbuser} -d ${POSTGRES_DB:-cityvoice}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   api:
     build:
       context: .
@@ -8,47 +25,27 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./api:/api
-      - cityvoice_db:/app/data
+      - ./api/uploads:/app/uploads
     environment:
-      - PYTHONUNBUFFERED=1
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_NAME}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-dbuser}:${POSTGRES_PASSWORD:-dbpass}@db:5432/${POSTGRES_DB:-cityvoice}
+      POSTGRES_USER: ${POSTGRES_USER:-dbuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dbpass}
+      POSTGRES_DB: ${POSTGRES_DB:-cityvoice}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_REGION: ${AWS_REGION:-eu-north-1}
     depends_on:
-      - db
-    healthcheck:
-      # Pings your API. If it gets a 200 OK, it marks the container as healthy.
-      test: [ "CMD", "curl", "-f", "http://localhost:8000/api/health" ]
-      interval: 10s
-      timeout: 5s
-      retries: 3
+      db:
+        condition: service_healthy
 
   app:
-    image: node:20-alpine
-    working_dir: /app
-    command: sh -c "npm install && npm run dev -- --host"
+    build:
+      context: ./app
+      dockerfile: Dockerfile
     ports:
-      - "80:5173"
-    volumes:
-      - ./app:/app
-      - /app/node_modules
-    environment:
-      - VITE_API_URL=http://localhost:8000
-
-  db:
-    image: postgres:15-alpine # Alpine is a lightweight version, great for dev
-    restart: always
-    environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_NAME}
-    ports:
-      - "5432:5432" # This allows you to connect a local tool like DBeaver or pgAdmin
-    volumes:
-      # This is the magic for persistent storage.
-      # It maps the named volume to where Postgres stores its actual data files.
-      - cityvoice_db:/app/data
+      - "80:80"
+    depends_on:
+      - api
 
 volumes:
   cityvoice_db:
