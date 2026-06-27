@@ -22,13 +22,22 @@ function Nav() {
 
   return (
     <nav className="nav">
-      <span className="nav-logo">City<span>Voice</span></span>
-      <NavLink to="/" end>Übersicht</NavLink>
-      <NavLink to="/map">Karte</NavLink>
-      {user && !user.is_behoerde && <NavLink to="/submit">+ Idee einreichen</NavLink>}
-      {user?.is_behoerde && <NavLink to="/behoerde">Anträge</NavLink>}
-      {user && !user.is_behoerde && <NavLink to="/meine-antraege">Meine Anträge</NavLink>}
-      <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '.75rem' }}>
+      {/* Left: logo */}
+      <div className="nav-left">
+        <span className="nav-logo">City<span>Voice</span></span>
+      </div>
+
+      {/* Center: main links */}
+      <div className="nav-center">
+        <NavLink to="/" end>Übersicht</NavLink>
+        <NavLink to="/map">Karte</NavLink>
+        {user && !user.is_behoerde && <NavLink to="/submit">+ Idee einreichen</NavLink>}
+        {user?.is_behoerde && <NavLink to="/behoerde">Anträge</NavLink>}
+        {user && !user.is_behoerde && <NavLink to="/meine-antraege">Meine Anträge</NavLink>}
+      </div>
+
+      {/* Right: about + user */}
+      <div className="nav-right">
         <NavLink to="/about">Über CityVoice</NavLink>
         {user ? (
           <>
