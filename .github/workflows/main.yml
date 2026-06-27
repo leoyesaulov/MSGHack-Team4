@@ -19,3 +19,8 @@ jobs:
           # echo "This is running directly on the EC2 hardware"
           # E.g., docker build, make install, or ollama model pulling
           docker compose up -d --build
+
+        env:
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
