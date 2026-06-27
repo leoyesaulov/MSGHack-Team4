@@ -1,41 +1,63 @@
-import { BrowserRouter, Routes, Route, NavLink, useNavigate } from 'react-router-dom'
-import { useAuthStore } from './lib/authStore'
-import HomePage from './pages/HomePage'
-import MapPage from './pages/MapPage'
-import SubmitPage from './pages/SubmitPage'
-import ProposalDetailPage from './pages/ProposalDetailPage'
-import MyProposalsPage from './pages/MyProposalsPage'
-import LoginPage from './pages/LoginPage'
-import RegisterPage from './pages/RegisterPage'
-import AboutPage from './pages/AboutPage'
-import BehoerdePage from './pages/BehoerdePage'
-import ProfilePage from './pages/ProfilePage'
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  NavLink,
+  useNavigate,
+} from "react-router-dom";
+import { useState } from "react";
+import { useAuthStore } from "./lib/authStore";
+import HomePage from "./pages/HomePage";
+import MapPage from "./pages/MapPage";
+import SubmitPage from "./pages/SubmitPage";
+import ProposalDetailPage from "./pages/ProposalDetailPage";
+import MyProposalsPage from "./pages/MyProposalsPage";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
+import AboutPage from "./pages/AboutPage";
+import BehoerdePage from "./pages/BehoerdePage";
+import ProfilePage from "./pages/ProfilePage";
 
 function Nav() {
-  const { user, clearAuth } = useAuthStore()
-  const navigate = useNavigate()
-
+  const { user, clearAuth } = useAuthStore();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const navigate = useNavigate();
+  const closeMenu = () => setMenuOpen(false);
   function logout() {
-    clearAuth()
-    navigate('/login')
+    clearAuth();
+    navigate("/login");
   }
 
   return (
     <nav className="nav">
       {/* Left: logo */}
       <div className="nav-left">
-        <NavLink to={user ? '/' : '/login'} style={{ textDecoration: 'none', borderBottom: 'none' }} className={() => ''}>
-          <span className="nav-logo">City<span>Voice</span></span>
+        <NavLink
+          to={user ? "/" : "/login"}
+          style={{ textDecoration: "none", borderBottom: "none" }}
+          className={() => ""}
+        >
+          <span className="nav-logo">
+            City<span>Voice</span>
+          </span>
         </NavLink>
       </div>
 
       {/* Center: main links */}
       <div className="nav-center">
-        {user && <NavLink to="/" end>Übersicht</NavLink>}
+        {user && (
+          <NavLink to="/" end>
+            Übersicht
+          </NavLink>
+        )}
         <NavLink to="/map">Karte</NavLink>
-        {user && !user.is_behoerde && <NavLink to="/submit">Idee einreichen</NavLink>}
+        {user && !user.is_behoerde && (
+          <NavLink to="/submit">Idee einreichen</NavLink>
+        )}
         {user?.is_behoerde && <NavLink to="/behoerde">Anträge</NavLink>}
-        {user && !user.is_behoerde && <NavLink to="/meine-antraege">Meine Anträge</NavLink>}
+        {user && !user.is_behoerde && (
+          <NavLink to="/meine-antraege">Meine Anträge</NavLink>
+        )}
       </div>
 
       {/* Right: about + user */}
@@ -45,23 +67,128 @@ function Nav() {
           <>
             <NavLink
               to="/profil"
-              style={{ fontSize: '.85rem', color: 'var(--muted)', fontWeight: 500, textDecoration: 'none' }}
+              style={{
+                fontSize: ".85rem",
+                color: "var(--muted)",
+                fontWeight: 500,
+                textDecoration: "none",
+              }}
             >
               👤 {user.display_name}
             </NavLink>
-            <button className="btn btn-ghost btn-sm" onClick={logout}>Abmelden</button>
+            <button className="btn btn-ghost btn-sm" onClick={logout}>
+              Abmelden
+            </button>
           </>
         ) : (
           <>
-            <NavLink to="/login" style={{ fontSize: '.88rem', fontWeight: 600, color: 'var(--muted)' }}>Anmelden</NavLink>
-            <NavLink to="/register">
-              <button className="btn btn-primary btn-sm">Registrieren</button>
+            <NavLink
+              to="/login"
+              style={{
+                fontSize: ".88rem",
+                fontWeight: 600,
+                color: "var(--muted)",
+              }}
+            >
+              Anmelden
+            </NavLink>
+            <NavLink
+              to="/register"
+              className="btn btn-primary btn-sm nav-register-btn"
+              onClick={closeMenu}
+            >
+              Registrieren
+            </NavLink>
+          </>
+        )}
+      </div>
+      <button className="menu-btn" onClick={() => setMenuOpen(!menuOpen)}>
+        {menuOpen ? "✕" : "☰"}
+      </button>
+      <div className={`mobile-menu ${menuOpen ? "open" : ""}`}>
+        {user && (
+          <NavLink to="/" onClick={closeMenu}>
+            Übersicht
+          </NavLink>
+        )}
+
+        <NavLink to="/map" onClick={closeMenu}>
+          Karte
+        </NavLink>
+
+        {user && !user.is_behoerde && (
+          <NavLink to="/submit" onClick={closeMenu}>
+            Idee einreichen
+          </NavLink>
+        )}
+
+        {user?.is_behoerde && (
+          <NavLink to="/behoerde" onClick={closeMenu}>
+            Anträge
+          </NavLink>
+        )}
+
+        {user && !user.is_behoerde && (
+          <NavLink to="/meine-antraege" onClick={closeMenu}>
+            Meine Anträge
+          </NavLink>
+        )}
+
+        <NavLink to="/about" onClick={closeMenu}>
+          Über CityVoice
+        </NavLink>
+
+        {user ? (
+          <>
+            <NavLink
+              to="/profil"
+              onClick={closeMenu}
+              style={{
+                fontSize: ".88rem",
+                color: "var(--muted)",
+                fontWeight: 500,
+                textDecoration: "none",
+              }}
+            >
+              👤 {user.display_name}
+            </NavLink>
+
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => {
+                logout();
+                closeMenu();
+              }}
+            >
+              Abmelden
+            </button>
+          </>
+        ) : (
+          <>
+            <NavLink
+              to="/login"
+              onClick={closeMenu}
+              style={{
+                fontSize: ".88rem",
+                fontWeight: 600,
+                color: "var(--muted)",
+              }}
+            >
+              Anmelden
+            </NavLink>
+
+            <NavLink
+              to="/register"
+              className="btn btn-primary btn-sm nav-register-btn"
+              onClick={closeMenu}
+            >
+              Registrieren
             </NavLink>
           </>
         )}
       </div>
     </nav>
-  )
+  );
 }
 
 export default function App() {
@@ -81,5 +208,5 @@ export default function App() {
         <Route path="/profil" element={<ProfilePage />} />
       </Routes>
     </BrowserRouter>
-  )
+  );
 }
