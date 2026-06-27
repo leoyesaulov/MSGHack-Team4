@@ -75,8 +75,6 @@ export default function ProposalDetailPage() {
           <h1>{proposal.title}</h1>
           <div className="detail-meta">
             <span>📍 {proposal.location_name}</span>
-            <span>🗂 {proposal.category}</span>
-            {proposal.department && <span>🏛 {proposal.department}</span>}
             <span>👤 {proposal.author_display_name} (@{proposal.author_username})</span>
             <span>📅 {new Date(proposal.created_at).toLocaleDateString('de-DE')}</span>
           </div>
@@ -107,20 +105,10 @@ export default function ProposalDetailPage() {
             </div>
 
             {tab === 'info' && (
-              <div>
-                {proposal.description_refined && (
-                  <div className="card" style={{ marginBottom: '1rem' }}>
-                    <div className="detail-section">
-                      <h2>Zusammenfassung</h2>
-                      <p style={{ lineHeight: 1.7 }}>{proposal.description_refined}</p>
-                    </div>
-                  </div>
-                )}
-                <div className="card">
-                  <div className="detail-section">
-                    <h2>Originale Eingabe des Bürgers</h2>
-                    <p style={{ lineHeight: 1.7, color: 'var(--muted)', fontStyle: 'italic' }}>„{proposal.description_raw}"</p>
-                  </div>
+              <div className="card">
+                <div className="detail-section">
+                  <h2>Zusammenfassung</h2>
+                  <p style={{ lineHeight: 1.7 }}>{proposal.description_refined || proposal.description_raw}</p>
                 </div>
               </div>
             )}
@@ -213,8 +201,6 @@ export default function ProposalDetailPage() {
                 <table style={{ width: '100%', fontSize: '.85rem', borderCollapse: 'collapse' }}>
                   <tbody>
                     {[
-                      ['Kategorie', proposal.category],
-                      ['Behörde', proposal.department ?? '—'],
                       ['Status', <StatusBadge key="s" status={proposal.status} />],
                       ['Eingereicht am', new Date(proposal.created_at).toLocaleDateString('de-DE')],
                       ['Kommentare', comments.length],
@@ -226,6 +212,17 @@ export default function ProposalDetailPage() {
                     ))}
                   </tbody>
                 </table>
+                {proposal.pdf_url && (
+                  <a
+                    href={proposal.pdf_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-ghost"
+                    style={{ display: 'flex', alignItems: 'center', gap: '.5rem', marginTop: '1rem', justifyContent: 'center' }}
+                  >
+                    📄 Bürgerantrag als PDF
+                  </a>
+                )}
               </div>
             </div>
           </div>

@@ -75,6 +75,7 @@ class ProposalBase(SQLModel):
     threshold: int = 50
     formal_text: Optional[str] = None
     image_path: Optional[str] = None
+    pdf_path: Optional[str] = None
     gemeinde: Optional[str] = Field(default=None, index=True)
 
 
@@ -90,7 +91,7 @@ class Proposal(ProposalBase, table=True):
 
 
 class ProposalCreate(ProposalBase):
-    pass
+    pdf_base64: Optional[str] = None  # base64-encoded PDF, saved to disk on create
 
 
 class ProposalRead(ProposalBase):
@@ -102,6 +103,7 @@ class ProposalRead(ProposalBase):
     updated_at: datetime
     vote_count: int = 0
     image_url: Optional[str] = None
+    pdf_url: Optional[str] = None
 
 
 class ProposalUpdate(SQLModel):

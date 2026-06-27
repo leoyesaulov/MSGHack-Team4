@@ -29,6 +29,7 @@ export interface Proposal {
   formal_text: string | null
   image_path: string | null
   image_url: string | null
+  pdf_url: string | null
   gemeinde: string | null
   author_id: number
   author_username: string
@@ -60,6 +61,7 @@ export interface ProposalCreatePayload {
   description_raw: string
   description_refined?: string
   formal_text?: string
+  pdf_base64?: string
   location_name: string
   latitude: number
   longitude: number

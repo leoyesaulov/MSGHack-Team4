@@ -41,9 +41,11 @@ def _enrich(proposal: Proposal, session: Session, request: Optional[Request] = N
     if proposal.author:
         data.author_username = proposal.author.username
         data.author_display_name = proposal.author.display_name
+    base = str(request.base_url).rstrip("/") if request else ""
     if proposal.image_path:
-        base = str(request.base_url).rstrip("/") if request else ""
         data.image_url = f"{base}/uploads/{proposal.image_path}"
+    if proposal.pdf_path:
+        data.pdf_url = f"{base}/uploads/{proposal.pdf_path}"
     return data
 
 
@@ -75,10 +77,23 @@ def create_proposal(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
+    import base64 as _b64
+    pdf_base64 = payload.pdf_base64
     proposal = Proposal.model_validate(payload, update={
         "author_id": current_user.id,
         "gemeinde": current_user.gemeinde,
+        "pdf_path": None,
     })
+
+    # Save PDF to disk if provided
+    if pdf_base64:
+        try:
+            pdf_bytes = _b64.b64decode(pdf_base64)
+            pdf_filename = f"antrag_{uuid.uuid4().hex}.pdf"
+            (UPLOADS_DIR / pdf_filename).write_bytes(pdf_bytes)
+            proposal.pdf_path = pdf_filename
+        except Exception as e:
+            print(f"Warning: Could not save PDF: {e}")
 
     # Generate embedding for new proposal
     try:
@@ -86,7 +101,7 @@ def create_proposal(
         if proposal.description_refined:
             full_text += f"\n\n{proposal.description_refined}"
         embedding_vec = create_embedding(full_text)
-        proposal.embedding = embedding_vec  # Store as list, pgvector handles it
+        proposal.embedding = embedding_vec
     except Exception as e:
         print(f"Warning: Could not create embedding for new proposal: {e}")
 

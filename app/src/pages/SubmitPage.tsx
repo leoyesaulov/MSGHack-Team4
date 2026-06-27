@@ -117,6 +117,7 @@ export default function SubmitPage() {
         description_raw: descriptionRaw,
         description_refined: result.summary,
         formal_text: result.formal_text,
+        pdf_base64: result.pdf_base64,
         location_name: locationName,
         latitude,
         longitude,
