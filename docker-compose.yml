@@ -15,6 +15,9 @@ services:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_NAME}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION}
     depends_on:
       - db
 
@@ -31,7 +34,7 @@ services:
       - VITE_API_URL=http://localhost:8000
 
   db:
-    image: postgres:15-alpine # Alpine is a lightweight version, great for dev
+    image: pgvector/pgvector:pg15 # PostgreSQL 15 with pgvector extension
     restart: always
     environment:
       - POSTGRES_USER=${POSTGRES_USER}

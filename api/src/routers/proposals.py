@@ -371,17 +371,22 @@ def improve_text(
     # 2. Use pgvector to find top 3 most similar ACCEPTED proposals
     # pgvector <=> operator returns cosine distance (1 - cosine_similarity)
     from sqlalchemy import text
-    similar_proposals = session.exec(
-        text("""
-            SELECT id, title, description_raw, description_refined, formal_text,
-                   1 - (embedding <=> :query_embedding::vector) as similarity
-            FROM proposal
-            WHERE embedding IS NOT NULL AND status = 'accepted'
-            ORDER BY embedding <=> :query_embedding::vector
-            LIMIT 3
-        """),
-        {"query_embedding": str(query_embedding)}
-    ).all()
+
+    # Convert embedding list to PostgreSQL array format
+    embedding_str = "[" + ",".join(map(str, query_embedding)) + "]"
+
+    # Direct string interpolation (safe here as embedding_str is generated internally)
+    stmt = text(f"""
+        SELECT id, title, description_raw, description_refined, formal_text,
+               1 - (embedding <=> '{embedding_str}'::vector) as similarity
+        FROM proposal
+        WHERE embedding IS NOT NULL AND status = 'accepted'
+        ORDER BY embedding <=> '{embedding_str}'::vector
+        LIMIT 3
+    """)
+
+    result = session.execute(stmt)
+    similar_proposals = result.fetchall()
 
     # 3. Convert to dict format for LLM
     similar = [
