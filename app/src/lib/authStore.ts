@@ -8,6 +8,8 @@ export interface AuthUser {
   email: string
   district: string | null
   gemeinde: string | null
+  bundesland: string | null
+  population: number | null
   is_behoerde: boolean
 }
 

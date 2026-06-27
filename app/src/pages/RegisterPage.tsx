@@ -62,8 +62,17 @@ export default function RegisterPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!form.gemeinde) {
-      toast('Bitte wähle eine Gemeinde aus.', 'error')
+    // auto-accept if the typed text exactly matches a known Gemeinde
+    let gemeinde = form.gemeinde
+    if (!gemeinde) {
+      const match = GEMEINDEN.find((g) => g.toLowerCase() === gemeindeInput.toLowerCase())
+      if (match) {
+        gemeinde = match
+        setForm((f) => ({ ...f, gemeinde: match }))
+      }
+    }
+    if (!gemeinde) {
+      toast('Bitte wähle eine Gemeinde aus der Liste aus.', 'error')
       return
     }
     if (form.password !== form.password2) {
@@ -77,7 +86,7 @@ export default function RegisterPage() {
         display_name: form.display_name,
         email: form.email,
         password: form.password,
-        gemeinde: form.gemeinde,
+        gemeinde,
       })
       const data = await api.auth.login(form.username, form.password)
       setAuth(data.access_token, data.user)

@@ -1,9 +1,6 @@
 """RAG (Retrieval-Augmented Generation) utilities for proposal improvement."""
-import json
-import os
-from typing import List, Tuple
-import numpy as np
 import boto3
+from typing import List
 
 # AWS Bedrock client with region and credentials
 bedrock = boto3.client(
@@ -17,6 +14,7 @@ bedrock = boto3.client(
 def create_embedding(text: str) -> List[float]:
     """Create embedding vector for given text using AWS Bedrock Titan."""
     try:
+        import json
         response = bedrock.invoke_model(
             modelId="amazon.titan-embed-text-v2:0",
             body=json.dumps({
@@ -29,50 +27,8 @@ def create_embedding(text: str) -> List[float]:
         return response_body['embedding']
     except Exception as e:
         print(f"Error creating embedding: {e}")
-        # Fallback: return a simple hash-based pseudo-embedding
-        import hashlib
-        hash_obj = hashlib.sha256(text.encode())
-        hash_bytes = hash_obj.digest()
-        # Convert to 1024 floats (Titan v2 dimension)
-        pseudo_emb = []
-        for i in range(1024):
-            pseudo_emb.append(float(hash_bytes[i % len(hash_bytes)]) / 255.0)
-        return pseudo_emb
-
-
-def cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
-    """Calculate cosine similarity between two vectors."""
-    v1 = np.array(vec1)
-    v2 = np.array(vec2)
-    return float(np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2)))
-
-
-def find_similar_proposals(
-    query_embedding: List[float],
-    proposal_embeddings: List[Tuple[int, str, str, str, str]],
-    top_k: int = 3
-) -> List[dict]:
-    """Find top-k most similar proposals using cosine similarity."""
-    similarities = []
-    for prop_id, title, desc_raw, massnahmen, begruendung, emb_json in proposal_embeddings:
-        if not emb_json:
-            continue
-        try:
-            prop_embedding = json.loads(emb_json)
-            sim = cosine_similarity(query_embedding, prop_embedding)
-            similarities.append({
-                "id": prop_id,
-                "title": title,
-                "description_raw": desc_raw,
-                "massnahmen": massnahmen,
-                "begruendung": begruendung,
-                "similarity": sim
-            })
-        except:
-            continue
-
-    similarities.sort(key=lambda x: x["similarity"], reverse=True)
-    return similarities[:top_k]
+        # Fallback: return zero vector
+        return [0.0] * 1024
 
 
 SYSTEM_PROMPT = """Du bist ein Assistent, der Bürgern hilft, ihre Anträge an die Gemeinde professionell und überzeugend zu formulieren.

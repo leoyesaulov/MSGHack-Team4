@@ -15,6 +15,7 @@ interface Props {
   lat: number
   lng: number
   onChange: (lat: number, lng: number) => void
+  initialCenter?: [number, number] | null
 }
 
 function ClickHandler({ onChange }: { onChange: (lat: number, lng: number) => void }) {
@@ -26,14 +27,20 @@ function ClickHandler({ onChange }: { onChange: (lat: number, lng: number) => vo
   return null
 }
 
-export default function LocationPicker({ lat, lng, onChange }: Props) {
+export default function LocationPicker({ lat, lng, onChange, initialCenter }: Props) {
+  // Don't render until we have a center to open at
+  if (!initialCenter) return (
+    <div style={{ height: 300, borderRadius: 10, border: '1.5px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: '.9rem', background: 'var(--bg)' }}>
+      Standort wird ermittelt…
+    </div>
+  )
+
   return (
     <div style={{ borderRadius: 10, overflow: 'hidden', border: '1.5px solid var(--border)', cursor: 'crosshair' }}>
       <MapContainer
-        center={[lat, lng]}
+        center={initialCenter}
         zoom={15}
         style={{ height: 300, width: '100%' }}
-        // re-center when lat/lng change externally (first render only via key)
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'

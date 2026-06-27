@@ -17,7 +17,8 @@ from ..models import (
     ProposalStatus, User,
 )
 from ..auth import get_current_user, get_current_user_optional, get_current_behoerde
-from ..rag import create_embedding, find_similar_proposals, improve_proposal_text
+from ..rag import create_embedding, improve_proposal_text
+from ..quorum import calculate_threshold
 
 router = APIRouter(prefix="/proposals", tags=["proposals"])
 
@@ -71,20 +72,20 @@ def create_proposal(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
+    threshold = calculate_threshold(current_user.bundesland, current_user.population)
     proposal = Proposal.model_validate(payload, update={
         "author_id": current_user.id,
         "gemeinde": current_user.gemeinde,
+        "threshold": threshold,
     })
 
     # Generate embedding for new proposal
     try:
-        from ..rag import create_embedding
-        import json
         full_text = f"{proposal.title}\n\n{proposal.description_raw}"
         if proposal.description_refined:
             full_text += f"\n\n{proposal.description_refined}"
         embedding_vec = create_embedding(full_text)
-        proposal.embedding = json.dumps(embedding_vec)
+        proposal.embedding = embedding_vec  # Store as list, pgvector handles it
     except Exception as e:
         print(f"Warning: Could not create embedding for new proposal: {e}")
 
@@ -126,6 +127,26 @@ def get_proposal(proposal_id: int, request: Request, session: Session = Depends(
     return _enrich(proposal, session, request)
 
 
+@router.delete("/{proposal_id}", status_code=204)
+def delete_proposal(
+    proposal_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    proposal = session.get(Proposal, proposal_id)
+    if not proposal:
+        raise HTTPException(status_code=404, detail="Proposal not found")
+    if proposal.author_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Nicht autorisiert")
+    # Delete related votes and comments first (no cascade configured)
+    for vote in session.exec(select(Vote).where(Vote.proposal_id == proposal_id)).all():
+        session.delete(vote)
+    for comment in session.exec(select(Comment).where(Comment.proposal_id == proposal_id)).all():
+        session.delete(comment)
+    session.delete(proposal)
+    session.commit()
+
+
 @router.patch("/{proposal_id}", response_model=ProposalRead)
 def update_proposal(
     proposal_id: int,
@@ -154,15 +175,13 @@ def update_proposal(
     # Generate embedding if status changed to accepted and no embedding exists
     if status_changed_to_accepted and not proposal.embedding:
         try:
-            from ..rag import create_embedding
-            import json
             full_text = f"{proposal.title}\n\n{proposal.description_raw}"
             if proposal.description_refined:
                 full_text += f"\n\n{proposal.description_refined}"
             if proposal.formal_text:
                 full_text += f"\n\n{proposal.formal_text}"
             embedding_vec = create_embedding(full_text)
-            proposal.embedding = json.dumps(embedding_vec)
+            proposal.embedding = embedding_vec  # Store as list, pgvector handles it
             print(f"Generated embedding for accepted proposal #{proposal.id}")
         except Exception as e:
             print(f"Warning: Could not create embedding for accepted proposal: {e}")
@@ -341,7 +360,7 @@ def improve_text(
     current_user: User = Depends(get_current_user),
 ):
     """
-    RAG endpoint: Takes user's raw proposal text, finds similar examples from DB,
+    RAG endpoint: Takes user's raw proposal text, finds similar examples from DB using pgvector,
     and uses LLM to improve the text.
     """
     user_text = payload.text.strip()
@@ -351,29 +370,33 @@ def improve_text(
     # 1. Create embedding for user's text
     query_embedding = create_embedding(user_text)
 
-    # 2. Fetch only ACCEPTED proposals with embeddings from DB
-    proposals_with_embeddings = session.exec(
-        select(
-            Proposal.id,
-            Proposal.title,
-            Proposal.description_raw,
-            Proposal.description_refined,
-            Proposal.formal_text,
-            Proposal.embedding
-        ).where(
-            Proposal.embedding.isnot(None),
-            Proposal.status == ProposalStatus.accepted
-        )
+    # 2. Use pgvector to find top 3 most similar ACCEPTED proposals
+    # pgvector <=> operator returns cosine distance (1 - cosine_similarity)
+    from sqlalchemy import text
+    similar_proposals = session.exec(
+        text("""
+            SELECT id, title, description_raw, description_refined, formal_text,
+                   1 - (embedding <=> :query_embedding::vector) as similarity
+            FROM proposal
+            WHERE embedding IS NOT NULL AND status = 'accepted'
+            ORDER BY embedding <=> :query_embedding::vector
+            LIMIT 3
+        """),
+        {"query_embedding": str(query_embedding)}
     ).all()
 
-    # Convert to list of tuples for find_similar_proposals
-    proposals_list = [
-        (p.id, p.title, p.description_raw, p.description_refined or "", p.formal_text or "", p.embedding)
-        for p in proposals_with_embeddings
+    # 3. Convert to dict format for LLM
+    similar = [
+        {
+            "id": p[0],
+            "title": p[1],
+            "description_raw": p[2],
+            "massnahmen": p[3] or "",
+            "begruendung": p[4] or "",
+            "similarity": p[5]
+        }
+        for p in similar_proposals
     ]
-
-    # 3. Find 3 most similar proposals
-    similar = find_similar_proposals(query_embedding, proposals_list, top_k=3)
 
     # 4. Call LLM to improve text
     improved = improve_proposal_text(user_text, similar)

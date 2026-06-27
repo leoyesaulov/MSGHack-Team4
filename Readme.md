@@ -10,8 +10,11 @@ A digital citizen participation platform that lets residents submit proposals, v
 - **Community voting** — Proposals need more than 50 votes to advance to the municipal inbox
 - **Gemeinde filter** — Users register with their Gemeinde; they only see proposals from their own community
 - **Behörden portal** — Authority accounts see only submitted proposals for their Gemeinde, can accept/reject, and download a formal PDF
-- **User profile** — Change username, display name, Gemeinde, and password at any time
-- **Interactive map** — All proposals shown on a Leaflet map with status markers
+- **User profile** — Change username, display name, Gemeinde, and password at any time; delete own proposals
+- **Interactive map** — All proposals shown on a Leaflet map with status markers; auto-flies to the user's Gemeinde when logged in, or to browser geolocation when not
+- **Proposal map** — Location picker in the submission form also centers on the user's Gemeinde automatically
+- **Photo + Street View** — Uploaded proposal photos and Google Street View can be toggled on the detail page
+- **Pipeline visualization** — 4-step progress display; accepted turns all steps green, rejected shows first 3 green and last red with ✕
 
 ## Status flow
 

@@ -27,9 +27,14 @@ class District(Base):
     __tablename__ = 'districts'
     
     id = Column(Integer, primary_key=True)
-    name = Column(String(100), unique=True, nullable=False)
+    ars = Column(String(12), unique=True, nullable=False)
+    name = Column(String(100), nullable=False)
+    state = Column(String(100), nullable=False)
     population = Column(Integer, nullable=False)
-    threshold_percentage = Column(DECIMAL(5,2), default=1.0)  # 1% = 1.0
+    last_updated = Column(DateTime)
+    rule_type = Column(String(20), default='percentage') #fixed, percentage, mixed
+    threshold_percentage = Column(DECIMAL(5,2))
+    fixed_threshold = Column(Integer)
     min_threshold = Column(Integer, default=50)
     max_threshold = Column(Integer, default=500)
     is_active = Column(Boolean, default=True)
@@ -40,9 +45,27 @@ class District(Base):
     proposal_thresholds = relationship("ProposalThreshold", back_populates="district")
     
     def calculate_threshold(self, category=None):
-        """Berechnet den dynamischen Schwellwert für diese Stadt"""
-        base_threshold = int(self.population * self.threshold_percentage / 100)
-        return max(self.min_threshold, min(self.max_threshold, base_threshold))
+        """berechnet dynamischen Schwellwert basierend auf Stadt-Regel"""
+        if not self.population:
+            raise ValueError(f"Keine Bevölkerungsdaten für {self.name} (ARS: {self.ars}).Bitte API-Update durchführen!")
+
+        if self.rule_type == 'fixed':
+            if self.fixed_threshold is None:
+                raise ValueError(f"Für {self.name} ist Regel-Typ 'fixed' gesetzt, aber fixed_threshold ist None.")
+            return self.fixed_threshold
+
+        elif self.rule_type == 'percentage':
+            if self.threshold_percentage is None:
+                raise ValueError(f"Für {self.name} ist Regel-Typ 'percentage' gesetzt, aber fixed_threshold ist None.")
+            return int(self.population*self.threshold_percentage/ 100)
+        
+        elif self.rule_type == 'mixed':
+            if any([self.threshold_percentage is None, self.min_threshold is None, self.max_threshold is None]):
+                raise ValueError(f"threshold_percentage, min_threshold oder max_threshold fehlt für {self.name}")
+            calculated = int(self.population * self.threshold_percentage/100)
+            return max(self.min_threshold, min(self.max_threshold, calculated))
+        else: 
+            raise ValueError(f"Unbekannter Regel-Typ '{self.rule_type}' für {self.name}.Erlaubt sind: 'fixed', 'percentage', 'mixed' ")
 
 class Proposal(Base):
     __tablename__ = 'proposals'

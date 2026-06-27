@@ -9,7 +9,7 @@ export default function AboutPage() {
         </h1>
         <p style={{ fontSize: '1.1rem', color: 'var(--muted)', lineHeight: 1.7 }}>
           CityVoice ist eine digitale Bürgerpartizipationsplattform, die es jedem Bürger ermöglicht,
-          Ideen und Anliegen für die Gemeinde unkompliziert einzureichen, zu unterstützen und zu verfolgen —
+          Ideen und Anliegen für die Gemeinde unkompliziert einzureichen, zu unterstützen und zu verfolgen,
           direkt aus dem Browser, ohne Behördendeutsch.
         </p>
       </div>

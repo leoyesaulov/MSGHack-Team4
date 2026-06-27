@@ -86,7 +86,6 @@ def load_buergerantraege_csv():
             except:
                 print(f"Creating embedding for proposal...")
             embedding_vec = create_embedding(full_text)
-            embedding_json = json.dumps(embedding_vec)
 
             # Create proposal (mark with CSV: prefix to identify imported ones)
             proposal = Proposal(
@@ -101,7 +100,7 @@ def load_buergerantraege_csv():
                 threshold=50,
                 formal_text=begruendung if begruendung else None,
                 author_id=system_user.id,
-                embedding=embedding_json
+                embedding=embedding_vec  # Store as list, pgvector handles it
             )
             session.add(proposal)
             imported += 1

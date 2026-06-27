@@ -7,6 +7,7 @@ import type { Proposal } from '../lib/types'
 import StatusBadge from '../components/StatusBadge'
 import ProgressBar from '../components/ProgressBar'
 import { STATUS_COLOR } from '../lib/statusLabels'
+import { useAuthStore } from '../lib/authStore'
 
 // Fix default icon paths broken by bundler
 delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl
@@ -30,14 +31,37 @@ function makeIcon(color: string) {
   })
 }
 
+const DEFAULT_CENTER: [number, number] = [48.2242, 11.6715]
+
 export default function MapPage() {
   const [proposals, setProposals] = useState<Proposal[]>([])
   const [selected, setSelected] = useState<number | null>(null)
+  const [center, setCenter] = useState<[number, number] | null>(null)
   const navigate = useNavigate()
+  const user = useAuthStore((s) => s.user)
 
   useEffect(() => {
     api.proposals.list().then(setProposals)
   }, [])
+
+  useEffect(() => {
+    if (user?.gemeinde) {
+      fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(user.gemeinde + ', Germany')}&format=json&limit=1`)
+        .then((r) => r.json())
+        .then((results) => {
+          setCenter(results[0] ? [parseFloat(results[0].lat), parseFloat(results[0].lon)] : DEFAULT_CENTER)
+        })
+        .catch(() => setCenter(DEFAULT_CENTER))
+    } else if (!user && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => setCenter([pos.coords.latitude, pos.coords.longitude]),
+        () => setCenter(DEFAULT_CENTER),
+        { timeout: 6000 }
+      )
+    } else {
+      setCenter(DEFAULT_CENTER)
+    }
+  }, [user])
 
   const selectedProposal = proposals.find((p) => p.id === selected)
 
@@ -69,8 +93,8 @@ export default function MapPage() {
 
       {/* Map */}
       <div className="map-main">
-        <MapContainer
-          center={[48.2242, 11.6715]}
+        {center && <MapContainer
+          center={center}
           zoom={14}
           style={{ height: '100%', width: '100%' }}
         >
@@ -107,7 +131,7 @@ export default function MapPage() {
               </Popup>
             </Marker>
           ))}
-        </MapContainer>
+        </MapContainer>}
       </div>
 
       {/* Detail panel (bottom bar on mobile, hidden on desktop — already accessible via sidebar click & nav) */}
