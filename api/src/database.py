@@ -1,4 +1,5 @@
 from sqlmodel import SQLModel, Session, create_engine
+from sqlalchemy import text
 import os
 
 db_user = os.getenv("POSTGRES_USER", "dbuser")
@@ -7,17 +8,20 @@ db_name = os.getenv("POSTGRES_DB", "cityvoice")
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    f"postgresql://{db_user}:{db_pass}@172.18.0.3:5432/{db_name}",
+    f"postgresql://{db_user}:{db_pass}@172.18.0.2:5432/{db_name}",
 )
 
 engine = create_engine(DATABASE_URL)
 
 
 def create_db_and_tables():
-    # Enable pgvector extension
-    with engine.connect() as conn:
-        conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
-        conn.commit()
+    # Enable pgvector extension (best-effort — server may not have it installed)
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+            conn.commit()
+    except Exception as e:
+        print(f"Warning: Could not enable pgvector extension: {e}")
 
     SQLModel.metadata.create_all(engine)
 
