@@ -71,6 +71,8 @@ export const api = {
       request<Proposal>('/proposals/', { method: 'POST', body: JSON.stringify(payload) }),
     patch: (id: number, payload: Partial<{ status: string; department: string; formal_text: string }>) =>
       request<Proposal>(`/proposals/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
+    delete: (id: number) =>
+      request<void>(`/proposals/${id}`, { method: 'DELETE' }),
     uploadImage: async (proposalId: number, file: File): Promise<Proposal> => {
       const token = getToken()
       const form = new FormData()

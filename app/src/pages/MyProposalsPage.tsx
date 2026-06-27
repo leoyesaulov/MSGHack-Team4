@@ -8,6 +8,7 @@ import ProgressBar from '../components/ProgressBar'
 import Pipeline from '../components/Pipeline'
 import { STATUS_LABEL } from '../lib/statusLabels'
 import type { ProposalStatus } from '../lib/types'
+import ToastContainer, { toast } from '../components/Toast'
 
 const STATUS_STEPS: ProposalStatus[] = ['open', 'submitted', 'accepted', 'rejected']
 
@@ -17,6 +18,23 @@ export default function MyProposalsPage() {
   const [proposals, setProposals] = useState<Proposal[]>([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<Proposal | null>(null)
+  const [deleting, setDeleting] = useState<number | null>(null)
+
+  async function handleDelete(p: Proposal, e: React.MouseEvent) {
+    e.stopPropagation()
+    if (!confirm(`Antrag „${p.title}" wirklich löschen?`)) return
+    setDeleting(p.id)
+    try {
+      await api.proposals.delete(p.id)
+      setProposals((prev) => prev.filter((x) => x.id !== p.id))
+      if (selected?.id === p.id) setSelected(null)
+      toast('Antrag gelöscht.')
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : 'Fehler beim Löschen', 'error')
+    } finally {
+      setDeleting(null)
+    }
+  }
 
   useEffect(() => {
     if (!user) { navigate('/login'); return }
@@ -28,6 +46,8 @@ export default function MyProposalsPage() {
   if (!user) return null
 
   return (
+    <>
+    <ToastContainer />
     <div className="page">
       <div style={{ marginBottom: '2rem' }}>
         <h1 style={{ fontSize: '1.8rem', fontWeight: 800, marginBottom: '.25rem' }}>Meine Anträge</h1>
@@ -54,14 +74,24 @@ export default function MyProposalsPage() {
                 onClick={() => setSelected(p)}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
-                  <div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     <StatusBadge status={p.status} />
                     <div style={{ fontWeight: 700, marginTop: '.35rem' }}>{p.title}</div>
                     <div style={{ fontSize: '.8rem', color: 'var(--muted)', marginTop: '.2rem' }}>📍 {p.location_name}</div>
                   </div>
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div style={{ fontWeight: 800, fontSize: '1.3rem', color: 'var(--brand)' }}>{p.vote_count}</div>
-                    <div style={{ fontSize: '.72rem', color: 'var(--muted)' }}>/{p.threshold}</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '.4rem', flexShrink: 0 }}>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontWeight: 800, fontSize: '1.3rem', color: 'var(--brand)' }}>{p.vote_count}</div>
+                      <div style={{ fontSize: '.72rem', color: 'var(--muted)' }}>/{p.threshold}</div>
+                    </div>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      style={{ color: 'var(--danger, #dc2626)', fontSize: '.78rem', padding: '.2rem .5rem' }}
+                      onClick={(e) => handleDelete(p, e)}
+                      disabled={deleting === p.id}
+                    >
+                      {deleting === p.id ? '…' : 'Löschen'}
+                    </button>
                   </div>
                 </div>
                 <div style={{ marginTop: '.75rem' }}>
@@ -113,5 +143,6 @@ export default function MyProposalsPage() {
         </div>
       )}
     </div>
+    </>
   )
 }

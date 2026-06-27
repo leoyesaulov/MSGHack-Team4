@@ -110,6 +110,26 @@ def get_proposal(proposal_id: int, request: Request, session: Session = Depends(
     return _enrich(proposal, session, request)
 
 
+@router.delete("/{proposal_id}", status_code=204)
+def delete_proposal(
+    proposal_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    proposal = session.get(Proposal, proposal_id)
+    if not proposal:
+        raise HTTPException(status_code=404, detail="Proposal not found")
+    if proposal.author_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Nicht autorisiert")
+    # Delete related votes and comments first (no cascade configured)
+    for vote in session.exec(select(Vote).where(Vote.proposal_id == proposal_id)).all():
+        session.delete(vote)
+    for comment in session.exec(select(Comment).where(Comment.proposal_id == proposal_id)).all():
+        session.delete(comment)
+    session.delete(proposal)
+    session.commit()
+
+
 @router.patch("/{proposal_id}", response_model=ProposalRead)
 def update_proposal(
     proposal_id: int,

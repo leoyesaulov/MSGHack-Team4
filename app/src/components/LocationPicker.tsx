@@ -1,4 +1,5 @@
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet'
+import { useEffect } from 'react'
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet'
 import L from 'leaflet'
 
 const PIN_ICON = L.divIcon({
@@ -11,10 +12,19 @@ const PIN_ICON = L.divIcon({
   iconAnchor: [16, 48],
 })
 
+function FlyTo({ lat, lng }: { lat: number; lng: number }) {
+  const map = useMap()
+  useEffect(() => {
+    map.flyTo([lat, lng], map.getZoom(), { duration: 1.2 })
+  }, [lat, lng, map])
+  return null
+}
+
 interface Props {
   lat: number
   lng: number
   onChange: (lat: number, lng: number) => void
+  flyTo?: [number, number] | null
 }
 
 function ClickHandler({ onChange }: { onChange: (lat: number, lng: number) => void }) {
@@ -26,19 +36,19 @@ function ClickHandler({ onChange }: { onChange: (lat: number, lng: number) => vo
   return null
 }
 
-export default function LocationPicker({ lat, lng, onChange }: Props) {
+export default function LocationPicker({ lat, lng, onChange, flyTo }: Props) {
   return (
     <div style={{ borderRadius: 10, overflow: 'hidden', border: '1.5px solid var(--border)', cursor: 'crosshair' }}>
       <MapContainer
         center={[lat, lng]}
         zoom={15}
         style={{ height: 300, width: '100%' }}
-        // re-center when lat/lng change externally (first render only via key)
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+        {flyTo && <FlyTo lat={flyTo[0]} lng={flyTo[1]} />}
         <ClickHandler onChange={onChange} />
         <Marker position={[lat, lng]} icon={PIN_ICON} />
       </MapContainer>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import { useNavigate } from 'react-router-dom'
 import L from 'leaflet'
 import { api } from '../lib/api'
@@ -7,6 +7,7 @@ import type { Proposal } from '../lib/types'
 import StatusBadge from '../components/StatusBadge'
 import ProgressBar from '../components/ProgressBar'
 import { STATUS_COLOR } from '../lib/statusLabels'
+import { useAuthStore } from '../lib/authStore'
 
 // Fix default icon paths broken by bundler
 delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl
@@ -30,14 +31,44 @@ function makeIcon(color: string) {
   })
 }
 
+function FlyToUser({ coords }: { coords: [number, number] | null }) {
+  const map = useMap()
+  useEffect(() => {
+    if (coords) map.flyTo(coords, 14, { duration: 1.5 })
+  }, [coords, map])
+  return null
+}
+
 export default function MapPage() {
   const [proposals, setProposals] = useState<Proposal[]>([])
   const [selected, setSelected] = useState<number | null>(null)
+  const [userCoords, setUserCoords] = useState<[number, number] | null>(null)
   const navigate = useNavigate()
+  const user = useAuthStore((s) => s.user)
 
   useEffect(() => {
     api.proposals.list().then(setProposals)
   }, [])
+
+  useEffect(() => {
+    if (user?.gemeinde) {
+      // Geocode the user's Gemeinde via Nominatim
+      fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(user.gemeinde + ', Germany')}&format=json&limit=1`)
+        .then((r) => r.json())
+        .then((results) => {
+          if (results[0]) {
+            setUserCoords([parseFloat(results[0].lat), parseFloat(results[0].lon)])
+          }
+        })
+        .catch(() => { /* stay on default */ })
+    } else if (!user && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => setUserCoords([pos.coords.latitude, pos.coords.longitude]),
+        () => { /* permission denied or unavailable — stay on default center */ },
+        { timeout: 6000 }
+      )
+    }
+  }, [user])
 
   const selectedProposal = proposals.find((p) => p.id === selected)
 
@@ -78,6 +109,7 @@ export default function MapPage() {
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
+          <FlyToUser coords={userCoords} />
           {proposals.map((p) => (
             <Marker
               key={p.id}

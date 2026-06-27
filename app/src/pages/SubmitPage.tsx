@@ -25,9 +25,22 @@ export default function SubmitPage() {
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [gemeindeFlyTo, setGemeindeFlyTo] = useState<[number, number] | null>(null)
 
   useEffect(() => {
-    if (!user) navigate('/login')
+    if (!user) { navigate('/login'); return }
+    if (user.gemeinde) {
+      fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(user.gemeinde + ', Germany')}&format=json&limit=1`)
+        .then((r) => r.json())
+        .then((results) => {
+          if (results[0]) {
+            const coords: [number, number] = [parseFloat(results[0].lat), parseFloat(results[0].lon)]
+            setGemeindeFlyTo(coords)
+            setForm((f) => ({ ...f, latitude: coords[0], longitude: coords[1] }))
+          }
+        })
+        .catch(() => {})
+    }
   }, [user, navigate])
 
   function set(field: keyof FormData, value: string) {
@@ -145,6 +158,7 @@ export default function SubmitPage() {
                 lat={form.latitude}
                 lng={form.longitude}
                 onChange={setLocation}
+                flyTo={gemeindeFlyTo}
               />
             </div>
 
