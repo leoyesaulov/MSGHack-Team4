@@ -25,5 +25,19 @@ services:
     environment:
       - VITE_API_URL=http://localhost:8000
 
+  db:
+    image: postgres:15-alpine # Alpine is a lightweight version, great for dev
+    restart: always
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+    ports:
+      - "5432:5432" # This allows you to connect a local tool like DBeaver or pgAdmin
+    volumes:
+      # This is the magic for persistent storage.
+      # It maps the named volume to where Postgres stores its actual data files.
+      - cityvoice_db:/app/data
+
 volumes:
   cityvoice_db:

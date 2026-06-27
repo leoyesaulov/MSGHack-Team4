@@ -16,8 +16,6 @@ jobs:
 
       - name: Execute Build Commands
         run: |
-          docker build -t team4.api .
-          docker run -d -p 8000:8000 team4.api
           # echo "This is running directly on the EC2 hardware"
           # E.g., docker build, make install, or ollama model pulling
-          # docker compose up -d --build
+          docker compose up -d --build

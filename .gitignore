@@ -13,3 +13,6 @@ api/uploads/
 # Node
 app/node_modules/
 app/dist/
+
+# environment
+.env
