@@ -5,7 +5,10 @@ import uuid
 import shutil
 import json
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
+import base64
+import httpx
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Request
+from fastapi.responses import Response
 from sqlmodel import Session, select, func
 from pydantic import BaseModel
 
@@ -17,7 +20,8 @@ from ..models import (
     ProposalStatus, User,
 )
 from ..auth import get_current_user, get_current_user_optional, get_current_behoerde
-from ..rag import create_embedding, improve_proposal_text
+from ..rag import create_embedding, improve_proposal_text, generate_antrag
+from ..pdf_generator import generate_buergerantrag_pdf
 
 router = APIRouter(prefix="/proposals", tags=["proposals"])
 
@@ -406,5 +410,118 @@ def improve_text(
             }
             for ex in similar
         ]
+    )
+
+
+# ---- AI Antrag generation: text + location + OSM + optional photo → summary + formal PDF ----
+
+class GenerateResponse(BaseModel):
+    title: str
+    summary: str
+    formal_text: str
+    pdf_base64: str  # base64-encoded PDF bytes
+
+
+@router.post("/generate", response_model=GenerateResponse)
+async def generate_proposal(
+    text: str = Form(...),
+    latitude: float = Form(...),
+    longitude: float = Form(...),
+    image: Optional[UploadFile] = File(None),
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    if not text.strip():
+        raise HTTPException(status_code=400, detail="Text darf nicht leer sein")
+
+    # 1. Fetch OSM reverse-geocode + nearby features via Nominatim
+    osm_context = ""
+    location_name = f"{latitude:.5f}, {longitude:.5f}"
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            rev = await client.get(
+                "https://nominatim.openstreetmap.org/reverse",
+                params={"lat": latitude, "lon": longitude, "format": "json",
+                        "addressdetails": "1", "extratags": "1", "accept-language": "de"},
+                headers={"User-Agent": "CityVoice/1.0"},
+            )
+            rev_data = rev.json()
+            addr = rev_data.get("address", {})
+            location_name = (
+                " ".join(filter(None, [addr.get("road"), addr.get("house_number")]))
+                or rev_data.get("display_name", "").split(",")[0]
+                or location_name
+            )
+            # Build a human-readable OSM context string
+            parts = []
+            for k in ["road", "suburb", "quarter", "neighbourhood", "city_district",
+                      "village", "town", "city", "postcode", "state"]:
+                if addr.get(k):
+                    parts.append(f"{k}: {addr[k]}")
+            extratags = rev_data.get("extratags", {})
+            for k in ["maxspeed", "surface", "lanes", "highway", "lit", "sidewalk",
+                      "cycleway", "foot", "access"]:
+                if extratags.get(k):
+                    parts.append(f"{k}: {extratags[k]}")
+            osm_context = "\n".join(parts)
+    except Exception as e:
+        print(f"Nominatim error: {e}")
+
+    # 2. Read image bytes if provided
+    image_bytes: Optional[bytes] = None
+    image_media_type: Optional[str] = None
+    if image and image.filename:
+        image_bytes = await image.read()
+        image_media_type = image.content_type or "image/jpeg"
+
+    # 3. RAG: find similar accepted proposals for context
+    from sqlalchemy import text as sa_text
+    similar_examples = []
+    try:
+        query_embedding = create_embedding(text)
+        embedding_str = "[" + ",".join(str(x) for x in query_embedding) + "]"
+        rows = session.execute(sa_text(f"""
+            SELECT title, description_raw, description_refined, formal_text,
+                   1 - (embedding <=> '{embedding_str}'::vector) as similarity
+            FROM proposal
+            WHERE embedding IS NOT NULL AND status = 'accepted'
+            ORDER BY embedding <=> '{embedding_str}'::vector
+            LIMIT 3
+        """)).all()
+        similar_examples = [
+            {"title": r[0], "description_raw": r[1],
+             "massnahmen": r[2] or "", "begruendung": r[3] or ""}
+            for r in rows
+        ]
+    except Exception as e:
+        print(f"RAG lookup error: {e}")
+
+    # 4. Call LLM with all context
+    result = await generate_antrag(
+        user_text=text,
+        location_name=location_name,
+        osm_context=osm_context,
+        similar_examples=similar_examples,
+        image_bytes=image_bytes,
+        image_media_type=image_media_type,
+        author_name=current_user.display_name,
+        gemeinde=current_user.gemeinde or "",
+    )
+
+    # 5. Generate PDF
+    pdf_bytes = generate_buergerantrag_pdf(
+        title=result["title"],
+        summary=result["summary"],
+        formal_text=result["formal_text"],
+        author_name=current_user.display_name,
+        gemeinde=current_user.gemeinde or "",
+        location_name=location_name,
+    )
+
+    return GenerateResponse(
+        title=result["title"],
+        summary=result["summary"],
+        formal_text=result["formal_text"],
+        pdf_base64=base64.b64encode(pdf_bytes).decode(),
     )
 

@@ -1,7 +1,8 @@
 """RAG (Retrieval-Augmented Generation) utilities for proposal improvement."""
 import boto3
+import json
 import os
-from typing import List
+from typing import List, Optional
 
 # AWS Bedrock client - credentials from environment variables
 bedrock = boto3.client(
@@ -94,3 +95,94 @@ Gib nur den verbesserten Text zurück."""
         import traceback
         traceback.print_exc()
         return f"Fehler bei der Textverbesserung: {str(e)}"
+
+
+GENERATE_SYSTEM_PROMPT = """Du bist ein Experte für kommunale Bürgerbeteiligung in Deutschland.
+Du hilfst Bürgern dabei, aus einer informellen Idee einen vollständigen, formellen Einwohnerantrag (Bürgerantrag) zu erstellen.
+
+Antworte AUSSCHLIESSLICH mit einem JSON-Objekt in diesem Format (kein Markdown, kein Text davor oder danach):
+{
+  "title": "Kurzer, prägnanter Titel des Antrags (max. 80 Zeichen)",
+  "summary": "3-5 Sätze: Klare Zusammenfassung des Anliegens für Bürger und Presse. Sachlich, verständlich, überzeugend.",
+  "formal_text": "Vollständiger formeller Antragstext mit Abschnitten: Antragsteller, Anliegen, Begründung, Maßnahmen, Forderung. Professionelle Behördensprache."
+}
+
+Wichtig:
+- Nutze die Standortinformationen und OSM-Daten für konkrete Ortsangaben
+- Nutze die Beispielanträge als Stilvorlage
+- Erfinde keine Fakten oder Zahlen
+- Der formal_text soll mindestens 300 Wörter haben"""
+
+
+async def generate_antrag(
+    user_text: str,
+    location_name: str,
+    osm_context: str,
+    similar_examples: List[dict],
+    image_bytes: Optional[bytes],
+    image_media_type: Optional[str],
+    author_name: str,
+    gemeinde: str,
+) -> dict:
+    """Generate a complete Bürgerantrag (title, summary, formal_text) using Claude via Bedrock."""
+
+    examples_text = "\n\n---\n\n".join([
+        f"Beispiel {i+1}:\nTitel: {ex['title']}\nText: {ex['description_raw'][:500]}"
+        for i, ex in enumerate(similar_examples)
+    ]) if similar_examples else "Keine Beispiele verfügbar."
+
+    user_message_text = f"""{GENERATE_SYSTEM_PROMPT}
+
+=== STANDORTINFORMATIONEN (OpenStreetMap) ===
+Adresse: {location_name}
+Gemeinde: {gemeinde}
+OSM-Details:
+{osm_context or 'Keine weiteren Details verfügbar.'}
+
+=== ERFOLGREICHE BEISPIELANTRÄGE (zur Orientierung) ===
+{examples_text}
+
+=== ANLIEGEN DES BÜRGERS ===
+{user_text}
+
+Erstelle jetzt den vollständigen Bürgerantrag als JSON."""
+
+    # Build multimodal content block
+    content: list = [{"text": user_message_text}]
+    if image_bytes and image_media_type:
+        import base64
+        content.append({
+            "image": {
+                "format": image_media_type.split("/")[-1].replace("jpg", "jpeg"),
+                "source": {
+                    "bytes": image_bytes,
+                },
+            }
+        })
+        content.append({"text": "Das obige Foto zeigt den betroffenen Standort. Beziehe es in den Antrag ein."})
+
+    try:
+        model_id = "eu.anthropic.claude-sonnet-4-5-20250929-v1:0"
+        response = bedrock.converse(
+            modelId=model_id,
+            messages=[{"role": "user", "content": content}],
+            inferenceConfig={"maxTokens": 2000, "temperature": 0.3},
+        )
+        raw = response["output"]["message"]["content"][0]["text"].strip()
+        # Strip markdown code fences if present
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        return json.loads(raw.strip())
+    except json.JSONDecodeError as e:
+        print(f"JSON parse error: {e}\nRaw: {raw[:200]}")
+        return {
+            "title": user_text[:80],
+            "summary": user_text[:500],
+            "formal_text": raw,
+        }
+    except Exception as e:
+        print(f"generate_antrag error: {e}")
+        import traceback; traceback.print_exc()
+        raise

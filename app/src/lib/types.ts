@@ -59,6 +59,7 @@ export interface ProposalCreatePayload {
   title: string
   description_raw: string
   description_refined?: string
+  formal_text?: string
   location_name: string
   latitude: number
   longitude: number
