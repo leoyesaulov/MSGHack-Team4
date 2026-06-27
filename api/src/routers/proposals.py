@@ -143,6 +143,34 @@ def get_proposal(proposal_id: int, request: Request, session: Session = Depends(
     return _enrich(proposal, session, request)
 
 
+@router.get("/{proposal_id}/pdf")
+def download_proposal_pdf(proposal_id: int, session: Session = Depends(get_session)):
+    proposal = session.get(Proposal, proposal_id)
+    if not proposal:
+        raise HTTPException(status_code=404, detail="Proposal not found")
+    if not proposal.formal_text:
+        raise HTTPException(status_code=404, detail="No formal text available")
+    _ = proposal.author
+    author_name = proposal.author.display_name if proposal.author else "Unbekannt"
+    gemeinde = proposal.gemeinde or "Gemeinde"
+    date_str = proposal.created_at.strftime("%d.%m.%Y")
+    pdf_bytes = generate_buergerantrag_pdf(
+        title=proposal.title,
+        summary=proposal.description_refined or proposal.description_raw,
+        formal_text=proposal.formal_text,
+        author_name=author_name,
+        gemeinde=gemeinde,
+        location_name=proposal.location_name,
+        date_str=date_str,
+    )
+    filename = f"Buergerantrag_{proposal.id}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 @router.delete("/{proposal_id}", status_code=204)
 def delete_proposal(
     proposal_id: int,

@@ -96,12 +96,12 @@ export default function ProposalDetailPage() {
             {/* TABS */}
             <div className="tabs">
               <div className={`tab ${tab === 'info' ? 'active' : ''}`} onClick={() => setTab('info')}>Beschreibung</div>
-              <div className={`tab ${tab === 'comments' ? 'active' : ''}`} onClick={() => setTab('comments')}>
-                Kommentare ({comments.length})
-              </div>
               {proposal.formal_text && (
                 <div className={`tab ${tab === 'formal' ? 'active' : ''}`} onClick={() => setTab('formal')}>Formaler Antrag</div>
               )}
+              <div className={`tab ${tab === 'comments' ? 'active' : ''}`} onClick={() => setTab('comments')}>
+                Kommentare ({comments.length})
+              </div>
             </div>
 
             {tab === 'info' && (
@@ -212,11 +212,10 @@ export default function ProposalDetailPage() {
                     ))}
                   </tbody>
                 </table>
-                {proposal.pdf_url && (
+                {proposal.formal_text && (
                   <a
-                    href={proposal.pdf_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    href={`/api/proposals/${proposal.id}/pdf`}
+                    download
                     className="btn btn-ghost"
                     style={{ display: 'flex', alignItems: 'center', gap: '.5rem', marginTop: '1rem', justifyContent: 'center' }}
                   >
