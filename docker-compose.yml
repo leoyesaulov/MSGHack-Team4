@@ -12,6 +12,9 @@ services:
       - cityvoice_db:/app/data
     environment:
       - PYTHONUNBUFFERED=1
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
 
   app:
     image: node:20-alpine

@@ -2,9 +2,9 @@ import os
 from sqlmodel import SQLModel, Session, create_engine
 
 # 1. Fetch individual variables (with your default fallbacks)
-db_user = os.getenv("DB_USER", "dbuser")
-db_pass = os.getenv("DB_PASSWORD", "dbpass")
-db_name = os.getenv("DB_NAME", "cityvoice")
+db_user = os.getenv("POSTGRES_USER", "dbuser")
+db_pass = os.getenv("POSTGRES_PASSWORD", "dbpass")
+db_name = os.getenv("POSTGRES_DB", "cityvoice")
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
