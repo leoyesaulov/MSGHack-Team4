@@ -12,9 +12,9 @@ services:
       - cityvoice_db:/app/data
     environment:
       - PYTHONUNBUFFERED=1
-      - POSTGRES_USER=${DB_USER}
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
-      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_NAME}
 
   app:
     image: node:20-alpine
@@ -32,9 +32,9 @@ services:
     image: postgres:15-alpine # Alpine is a lightweight version, great for dev
     restart: always
     environment:
-      - POSTGRES_USER=${DB_USER}
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
-      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_NAME}
     ports:
       - "5432:5432" # This allows you to connect a local tool like DBeaver or pgAdmin
     volumes:
