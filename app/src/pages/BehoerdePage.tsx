@@ -100,12 +100,8 @@ export default function BehoerdePage() {
       <div className="page">
         <div style={{ marginBottom: '2rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem', marginBottom: '.5rem' }}>
-            <span style={{ fontSize: '1.8rem' }}>📋</span>
             <h1 style={{ fontSize: '1.8rem', fontWeight: 900 }}>Anträge</h1>
           </div>
-          <p style={{ color: 'var(--muted)' }}>
-            Angemeldete Behörde: <strong>{user?.display_name}</strong> — alle Anträge mit mehr als 50 Stimmen
-          </p>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: selected ? '1fr 1fr' : '1fr', gap: '1.5rem', alignItems: 'start' }}>
